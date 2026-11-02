@@ -75,6 +75,7 @@ class ScreenshotTest {
         lessonShot("hifz-next-ayah", hifz.first { it is Exercise.Choice && it.prompt == "What comes next?" })
         lessonShot("hifz-order", hifz.first { it is Exercise.Order })
         lessonShot("hifz-next-word", b.build(Course.lesson("h1-recall")).first { it is Exercise.Choice && it.prompt == "Which word comes next?" })
+        shot("settings") { app.iqra.ui.SettingsScreen(ProgressStore()) {} }
         shot("result") { ResultScreen(LessonResult("Meet the letters", true, 15, 92), 3) {} }
     }
 }

@@ -2,11 +2,15 @@ package app.iqra.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.iqra.engine.DAILY_GOALS
+import app.iqra.data.Letters
 import app.iqra.engine.ProgressStore
+import app.iqra.engine.Skills
 
 private fun goalName(xp: Int) = when (xp) {
     10 -> "Casual"
@@ -81,6 +87,33 @@ fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
             InfoRow("Best streak", "${progress.bestStreak} days")
             InfoRow("Letters and rules practised", "${progress.skills.size}")
         }
+
+        SectionLabel("LETTERS")
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(palette.card).padding(12.dp)) {
+            // Right to left, as the alphabet is read.
+            Letters.all.chunked(7).forEach { row ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    row.reversed().forEach { letter ->
+                        val state = progress.skills[Skills.letter(letter)]
+                        val bg = when {
+                            state == null -> palette.background
+                            state.box == 0 -> palette.wrongSoft
+                            state.box < 3 -> palette.accentSoft
+                            else -> palette.correctSoft
+                        }
+                        Box(Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(10.dp)).background(bg), contentAlignment = Alignment.Center) {
+                            Text(letter.char, style = arabicStyle(24, lineFactor = 1.6))
+                        }
+                    }
+                }
+            }
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Legend(palette.wrongSoft, "Needs practice")
+                Legend(palette.accentSoft, "Learning")
+                Legend(palette.correctSoft, "Strong")
+            }
+        }
+
         Spacer(Modifier.padding(top = 12.dp))
         Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(palette.card)
@@ -98,6 +131,15 @@ fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
             confirmButton = { TextButton({ store.reset(); confirmReset = false }) { Text("Reset", color = palette.wrong) } },
             dismissButton = { TextButton({ confirmReset = false }) { Text("Cancel") } },
         )
+    }
+}
+
+@Composable
+private fun Legend(color: androidx.compose.ui.graphics.Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(color))
+        Spacer(Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, color = palette.secondary)
     }
 }
 

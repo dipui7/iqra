@@ -137,9 +137,9 @@ private fun UnitCard(unit: CourseUnit, progress: Progress, onStart: (String) -> 
                 Text(unit.title, style = MaterialTheme.typography.titleLarge, color = palette.text)
                 Text(unit.subtitle, style = MaterialTheme.typography.bodyMedium, color = palette.secondary)
             }
-            if (unit.letters.isNotEmpty()) {
+            if (unit.badge.isNotEmpty()) {
                 Text(
-                    unit.letters.joinToString(" ") { it.char },
+                    unit.badge,
                     style = arabicStyle(30).copy(textDirection = TextDirection.Rtl, color = palette.accent),
                 )
             }

@@ -38,7 +38,7 @@ All of this is also shown in the app (ⓘ on the home screen).
 
 ## What's in the first milestone
 
-9 units, 23 lessons:
+14 units, 38 lessons:
 
 1–7. **The 28 letters** in groups of 3–5 (similar shapes together). Each unit has:
    - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, buttons to hear
@@ -51,6 +51,13 @@ All of this is also shown in the app (ⓘ on the home screen).
 8. **Short vowels** — fatḥa, kasra, ḍamma; read syllables (بَ = ba).
 9. **Letters in the Quran** — listen to the opening letters (الٓمٓ, يسٓ, طه …) recited and pick
    the text, or name the letters that make them up.
+
+10–13. **Reading rules** — sukūn, shadda, tanwīn, long vowels. Each unit: *Meet* (the mark,
+   examples, reading questions), *Read with it* (practice words, matching, earlier rules mixed
+   in) and *Find it in the Quran* ("Which word has a shadda?" with real Juz ʿAmma words).
+   Practice words are built from letters and marks the way a Qāʿida primer does; they are
+   lesson text, not Quranic text.
+14. **Reading words** — mixed practice words, every mark in real Quran words, final review.
 
 Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, 5 hearts (lose one per
 mistake, refill one every 20 minutes), wrong answers come back at the end of the lesson,
@@ -119,6 +126,7 @@ composeApp/src/
     data/Letters.kt        28 letters, their shapes, sounds; vowel marks
     data/Quran.kt          loads the Tanzil XML; ayah/word lookup; EveryAyah URLs
     data/Course.kt         units, lessons, unlock rules, opening-letter ayat
+    data/Reading.kt        reading rules (sukūn, shadda, tanwīn, long vowels), practice syllables
     data/Sound.kt          Sound (streamed ayah or bundled clip); which letter clips exist
     engine/Exercise.kt     exercise types (intro cards, multiple choice, match pairs)
     engine/LessonBuilder.kt  turns a lesson into a shuffled list of exercises
@@ -137,8 +145,8 @@ Roughly in order of value:
 
 1. **Letter sounds audio.** The app is ready for per-letter clips (see *Letter sounds*);
    the recordings themselves still need to be made or licensed.
-2. **More reading units:** sukūn, shadda, tanwīn, long vowels (ا و ي), then reading whole
-   words and short ayat of Juz ʿAmma with word-by-word highlighting.
+2. **More reading:** ~~sukūn, shadda, tanwīn, long vowels~~ (done); next: hamza forms, the
+   silent letters of the Uthmani script, reading short ayat with word-by-word highlighting.
 3. **Hifz (memorisation) track** for Juz ʿAmma: ayah ordering, fill the missing word,
    listen-and-continue, recite-along.
 4. **Tajweed basics** (qalqala, ghunna, madd) with colour-coded text — Tanzil offers tajweed data.

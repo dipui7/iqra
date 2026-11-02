@@ -1,6 +1,5 @@
 package app.iqra.engine
 
-import app.iqra.data.Haraka
 import app.iqra.data.Letter
 import app.iqra.data.Sound
 
@@ -16,7 +15,8 @@ sealed interface Exercise {
      */
     data class LetterIntro(val letter: Letter, val name: Sound? = null, val sound: Sound? = null) : Exercise
 
-    data class VowelIntro(val haraka: Haraka, val examples: List<Syllable>) : Exercise
+    /** Introduces a vowel mark or reading rule, with tappable examples. */
+    data class RuleIntro(val label: String, val name: String, val hint: String, val examples: List<Syllable>) : Exercise
 
     /**
      * A multiple-choice question. Almost every question type in the course is one of these:
@@ -35,6 +35,8 @@ sealed interface Exercise {
         /** Offer [audio] only after answering, because hearing it would give the answer away. */
         val audioAfterAnswer: Boolean = false,
         val explanation: String? = null,
+        /** What this question practises, e.g. "letter:ba" or "rule:shadda" (see [Skills]). */
+        val skill: String? = null,
     ) : Exercise
 
     /** Tap an Arabic item, then its matching Latin item, until all pairs are matched. */

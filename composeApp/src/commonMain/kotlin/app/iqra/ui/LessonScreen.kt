@@ -84,7 +84,7 @@ fun LessonScreen(
 
     fun finish(passed: Boolean) {
         stopAudio()
-        val questions = exercises.count { it !is Exercise.LetterIntro && it !is Exercise.VowelIntro }
+        val questions = exercises.count { it !is Exercise.LetterIntro && it !is Exercise.RuleIntro }
         val accuracy = if (questions == 0) 100 else (100 * questions / (questions + session.mistakes))
         val xp = if (passed) LESSON_XP + if (session.mistakes == 0) PERFECT_BONUS_XP else 0 else 0
         if (passed) store.completeLesson(lessonId, xp)
@@ -106,7 +106,7 @@ fun LessonScreen(
             ) {
                 when (exercise) {
                     is Exercise.LetterIntro -> LetterIntro(exercise)
-                    is Exercise.VowelIntro -> VowelIntro(exercise)
+                    is Exercise.RuleIntro -> RuleIntro(exercise)
                     is Exercise.Choice -> ChoiceQuestion(exercise, session)
                     is Exercise.Match -> MatchQuestion(exercise, session)
                 }
@@ -183,11 +183,11 @@ private fun LetterIntro(intro: Exercise.LetterIntro) {
 }
 
 @Composable
-private fun VowelIntro(intro: Exercise.VowelIntro) {
-    Label("NEW VOWEL MARK")
+private fun RuleIntro(intro: Exercise.RuleIntro) {
+    Label(intro.label)
     Card {
-        Text(intro.haraka.name, style = MaterialTheme.typography.titleLarge, color = palette.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Text(intro.haraka.hint, color = palette.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+        Text(intro.name, style = MaterialTheme.typography.titleLarge, color = palette.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(intro.hint, color = palette.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
     }
     Spacer(Modifier.height(16.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

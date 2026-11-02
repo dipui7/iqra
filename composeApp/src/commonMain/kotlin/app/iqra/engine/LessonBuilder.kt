@@ -10,8 +10,12 @@ import app.iqra.data.Letter
 import app.iqra.data.LetterAudio
 import app.iqra.data.Letters
 import app.iqra.data.Opening
+import app.iqra.data.Piece
+import app.iqra.data.Pieces
 import app.iqra.data.QuranText
 import app.iqra.data.QuranWord
+import app.iqra.data.Rule
+import app.iqra.data.Rules
 import app.iqra.data.Sound
 import kotlin.random.Random
 
@@ -34,6 +38,52 @@ class LessonBuilder(
             LessonKind.VowelsLearn -> vowelsLearn()
             LessonKind.VowelsPractice -> vowelsPractice()
             LessonKind.Openings -> openings()
+            LessonKind.RuleLearn -> ruleLearn(unit.rule!!)
+            LessonKind.RulePractice -> rulePractice(unit.rule!!, Course.rulesUpTo(unit))
+            LessonKind.RuleQuran -> ruleQuran(listOf(unit.rule!!), questions = 10)
+            LessonKind.ReadingReview -> readingReview()
+            LessonKind.QuranMarks -> ruleQuran(Rules.all, questions = 12)
+        }
+    }
+
+    /**
+     * A practice session for the given skills (see [Skills]): a few questions on each, mixed.
+     * Unknown skills are ignored.
+     */
+    fun practice(skills: List<String>, questions: Int = 12): List<Exercise> {
+        if (skills.isEmpty()) return emptyList()
+        val out = mutableListOf<Exercise>()
+        var i = 0
+        while (out.size < questions && i < questions * 3) {
+            skillQuestion(skills[i % skills.size])?.let(out::add)
+            i++
+        }
+        return out.shuffled(random)
+    }
+
+    private fun skillQuestion(skill: String): Exercise.Choice? {
+        val (kind, key) = skill.split(':', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
+        return when (kind) {
+            "letter" -> {
+                val letter = Letters.all.firstOrNull { it.key == key } ?: return null
+                val unit = Course.units.firstOrNull { letter in it.letters }
+                val options = listOfNotNull(
+                    letterToName(letter, unit), nameToLetter(letter, unit), soundToLetter(letter, unit),
+                    if (letter.joins) formToLetter(letter, unit) else null,
+                    hearName(letter, unit), hearSound(letter, unit),
+                )
+                options.random(random)
+            }
+            "vowel" -> {
+                val h = Harakat.all.firstOrNull { it.sound == key } ?: return null
+                val letter = consonants.random(random)
+                hearSyllable(letter, h)?.takeIf { random.nextBoolean() } ?: readSyllable(letter, h)
+            }
+            "rule" -> {
+                val rule = Rules.all.firstOrNull { it.key == key } ?: return null
+                if (random.nextInt(3) == 0) whichIsRead(rule) else readWord(rule)
+            }
+            else -> null
         }
     }
 
@@ -80,7 +130,7 @@ class LessonBuilder(
         val sample = listOf(Letters.ba, Letters.ta, Letters.mim)
         return Harakat.all.flatMap { h ->
             val examples = sample.map { syllable(it, h) }
-            listOf(Exercise.VowelIntro(h, examples), readSyllable(sample.random(random), h))
+            listOf(Exercise.RuleIntro("NEW VOWEL MARK", h.name, h.hint, examples), readSyllable(sample.random(random), h))
         } + List(4) { readSyllable(consonants.random(random), Harakat.all.random(random)) }
     }
 
@@ -160,6 +210,7 @@ class LessonBuilder(
             autoPlay = listenTo != null,
             audioAfterAnswer = listenTo == null,
             explanation = "${letter.char}  is ${letter.name}: ${letter.hint}",
+            skill = Skills.letter(letter),
         )
     }
 
@@ -214,6 +265,7 @@ class LessonBuilder(
             audio = clip,
             autoPlay = true,
             explanation = "${right.arabic}  is read \"${right.latin}\": ${letter.name} with ${h.name}",
+            skill = Skills.vowel(h),
         )
     }
 
@@ -237,6 +289,7 @@ class LessonBuilder(
             audio = audio.syllable(letter, h),
             audioAfterAnswer = true,
             explanation = "${letter.name} with ${h.name} is read \"$right\"",
+            skill = Skills.vowel(h),
         )
     }
 
@@ -253,6 +306,7 @@ class LessonBuilder(
             caption = "Words from Juz ʿAmma and Al-Fātiḥah",
             audio = Sound.Ayah(answer.ref),
             explanation = "${answer.text}  — from ${quran.suraName(answer.ref.sura)}, ${answer.ref}",
+            skill = Skills.letter(letter),
         )
     }
 
@@ -267,6 +321,192 @@ class LessonBuilder(
             options = listOf(Option("Yes", arabic = false), Option("No", arabic = false)),
             correct = if (wantYes) 0 else 1,
             audio = Sound.Ayah(word.ref),
+            skill = Skills.letter(letter),
         )
+    }
+
+    // --- Reading rules ----------------------------------------------------------------------
+
+    /** One syllable of a practice word, kept symbolic so it can be varied for wrong options. */
+    private sealed interface Spec {
+        data class Open(val l: Letter, val h: Haraka) : Spec
+        data class Closed(val l: Letter) : Spec
+        data class Doubled(val l: Letter, val h: Haraka) : Spec
+        data class Tanwin(val l: Letter, val h: Haraka) : Spec
+        data class Long(val l: Letter, val h: Haraka) : Spec
+    }
+
+    private fun piece(s: Spec): Piece = when (s) {
+        is Spec.Open -> Pieces.open(s.l, s.h)
+        is Spec.Closed -> Pieces.closed(s.l)
+        is Spec.Doubled -> Pieces.doubled(s.l, s.h)
+        is Spec.Tanwin -> Pieces.tanwin(s.l, s.h)
+        is Spec.Long -> Pieces.long(s.l, s.h)
+    }
+
+    private fun word(specs: List<Spec>) = Pieces.word(specs.map(::piece))
+
+    /** Plausible misreadings of one syllable: another vowel, or ignoring the mark. */
+    private fun misreadings(s: Spec): List<Spec> = when (s) {
+        is Spec.Open -> (Harakat.all - s.h).map { Spec.Open(s.l, it) }
+        is Spec.Closed -> listOf(Spec.Open(s.l, Harakat.fatha), Spec.Open(s.l, Harakat.kasra), Spec.Open(s.l, Harakat.damma))
+        is Spec.Doubled -> listOf(Spec.Open(s.l, s.h)) + (Harakat.all - s.h).map { Spec.Doubled(s.l, it) }
+        is Spec.Tanwin -> listOf(Spec.Open(s.l, s.h)) + (Harakat.all - s.h).map { Spec.Tanwin(s.l, it) }
+        is Spec.Long -> listOf(Spec.Open(s.l, s.h)) + (Harakat.all - s.h).map { Spec.Long(s.l, it) }
+    }
+
+    /** Letters whose sound is one Latin character, so a doubled sound reads clearly ("bb", not "shsh"). */
+    private val singleSound = consonants.filter { it.sound.length == 1 && it.sound != "ʿ" }
+
+    /** Wāw and yā with sukūn after ḍamma / kasra are long vowels, so closed syllables avoid them. */
+    private val closable = consonants - Letters.waw - Letters.ya
+
+    private fun h() = Harakat.all.random(random)
+
+    /** A short practice word that uses [rule]. */
+    private fun specsFor(rule: Rule): List<Spec> {
+        val c = { consonants.random(random) }
+        val end = { closable.random(random) }
+        return when (rule) {
+            Rules.sukun -> if (random.nextInt(3) == 0) listOf(Spec.Open(c(), h()), Spec.Open(c(), h()), Spec.Closed(end()))
+            else listOf(Spec.Open(c(), h()), Spec.Closed(end()))
+            Rules.shadda -> listOf(Spec.Open(c(), h()), Spec.Doubled(singleSound.random(random), h()))
+            Rules.tanwin -> listOf(Spec.Open(c(), h()), Spec.Tanwin(c(), h()))
+            else -> if (random.nextBoolean()) listOf(Spec.Long(c(), h()), Spec.Closed(end()))
+            else listOf(Spec.Open(c(), h()), Spec.Long(c(), h()))
+        }
+    }
+
+    /** The right word and up to three misread versions of it, all read differently. */
+    private fun wordAndMisreadings(rule: Rule): Pair<Piece, List<Piece>> {
+        val specs = specsFor(rule)
+        val right = word(specs)
+        val wrong = specs.indices.flatMap { i -> misreadings(specs[i]).map { alt -> word(specs.toMutableList().also { it[i] = alt }) } }
+            .filter { it.latin != right.latin && it.arabic != right.arabic }
+            .distinctBy { it.latin }.distinctBy { it.arabic }
+            .shuffled(random).take(3)
+        return right to wrong
+    }
+
+    private fun ruleNote(rule: Rule) = when (rule) {
+        Rules.sukun -> "the letter with sukūn has no vowel"
+        Rules.shadda -> "the letter with shadda is said twice"
+        Rules.tanwin -> "tanwīn adds an \"n\""
+        else -> "the vowel is stretched"
+    }
+
+    /** "How is this read?" — a practice word, Latin options. */
+    private fun readWord(rule: Rule): Exercise.Choice {
+        val (right, wrong) = wordAndMisreadings(rule)
+        val choices = (wrong + right).shuffled(random)
+        return Exercise.Choice(
+            prompt = "How is this read?",
+            big = right.arabic,
+            options = choices.map { Option(it.latin, arabic = false) },
+            correct = choices.indexOf(right),
+            explanation = "${right.arabic}  is read \"${right.latin}\": ${ruleNote(rule)}",
+            skill = Skills.rule(rule),
+        )
+    }
+
+    /** "Which one is read …?" — Latin shown, Arabic options. */
+    private fun whichIsRead(rule: Rule): Exercise.Choice {
+        val (right, wrong) = wordAndMisreadings(rule)
+        val choices = (wrong + right).shuffled(random)
+        return Exercise.Choice(
+            prompt = "Which one is read \"${right.latin}\"?",
+            options = choices.map { Option(it.arabic, arabic = true) },
+            correct = choices.indexOf(right),
+            explanation = "${right.arabic}  is read \"${right.latin}\": ${ruleNote(rule)}",
+            skill = Skills.rule(rule),
+        )
+    }
+
+    private fun wordsMatch(rules: List<Rule>): Exercise.Match {
+        val words = mutableListOf<Piece>()
+        while (words.size < 4) {
+            val w = word(specsFor(rules.random(random)))
+            if (words.none { it.latin == w.latin || it.arabic == w.arabic }) words += w
+        }
+        return Exercise.Match("Match each word to how it is read", words.map { it.arabic to it.latin })
+    }
+
+    private fun ruleExamples(rule: Rule): List<Syllable> = with(Letters) {
+        val pieces = when (rule) {
+            Rules.sukun -> listOf(
+                Pieces.word(listOf(Pieces.open(mim, Harakat.fatha), Pieces.closed(kaf))),
+                Pieces.word(listOf(Pieces.open(qaf, Harakat.damma), Pieces.closed(lam))),
+                Pieces.word(listOf(Pieces.open(mim, Harakat.kasra), Pieces.closed(nun))),
+            )
+            Rules.shadda -> listOf(
+                Pieces.word(listOf(Pieces.open(ra, Harakat.fatha), Pieces.doubled(ba, Harakat.fatha))),
+                Pieces.word(listOf(Pieces.open(ta, Harakat.damma), Pieces.doubled(mim, Harakat.fatha))),
+                Pieces.word(listOf(Pieces.open(kaf, Harakat.damma), Pieces.doubled(lam, Harakat.damma))),
+            )
+            Rules.tanwin -> Harakat.all.map { Pieces.tanwin(ba, it) }
+            else -> Harakat.all.map { Pieces.long(ba, it) }
+        }
+        pieces.map { Syllable(it.arabic, it.latin) }
+    }
+
+    private fun ruleLearn(rule: Rule): List<Exercise> =
+        listOf(Exercise.RuleIntro("NEW RULE", rule.name, rule.hint, ruleExamples(rule))) +
+            List(6) { readWord(rule) } + List(2) { whichIsRead(rule) }
+
+    private fun rulePractice(rule: Rule, soFar: List<Rule>): List<Exercise> {
+        val earlier = soFar - rule
+        val main = List(7) { readWord(rule) } + List(3) { whichIsRead(rule) }
+        val review = earlier.shuffled(random).take(2).map { readWord(it) }
+        val questions = (main + review).shuffled(random)
+        return questions.take(5) + wordsMatch(listOf(rule)) + questions.drop(5)
+    }
+
+    private fun readingReview(): List<Exercise> {
+        val questions = List(12) {
+            val rule = Rules.all.random(random)
+            if (it % 4 == 3) whichIsRead(rule) else readWord(rule)
+        }
+        return questions.take(6) + wordsMatch(Rules.all) + questions.drop(6)
+    }
+
+    private fun ruleQuestionName(rule: Rule) = when (rule) {
+        Rules.long -> "a long vowel"
+        else -> "a ${rule.name.lowercase()}"
+    }
+
+    /** "Which word has a shadda?" and "Does this word have a shadda?" with real Quran words. */
+    private fun ruleQuran(rules: List<Rule>, questions: Int): List<Exercise> {
+        val words = Course.wordSurahs.flatMap { quran.words(it) }.distinctBy { it.text }
+        return List(questions) { n ->
+            val rule = rules[n % rules.size]
+            val with = words.filter { rule.inWord(it.text) }
+            val without = words.filter { rule.clearlyWithout(it.text) }
+            if (n % 3 == 2) {
+                val wantYes = random.nextBoolean()
+                val word = (if (wantYes) with else without).random(random)
+                Exercise.Choice(
+                    prompt = "Does this word have ${ruleQuestionName(rule)}?",
+                    big = word.text,
+                    caption = "${quran.suraName(word.ref.sura)} · ${word.ref}",
+                    options = listOf(Option("Yes", arabic = false), Option("No", arabic = false)),
+                    correct = if (wantYes) 0 else 1,
+                    audio = Sound.Ayah(word.ref),
+                    explanation = rule.hint,
+                    skill = Skills.rule(rule),
+                )
+            } else {
+                val answer = with.random(random)
+                val choices = (without.shuffled(random).take(3) + answer).shuffled(random)
+                Exercise.Choice(
+                    prompt = "Which word has ${ruleQuestionName(rule)}?",
+                    options = choices.map { Option(it.text, arabic = true) },
+                    correct = choices.indexOf(answer),
+                    caption = "Words from Juz ʿAmma and Al-Fātiḥah",
+                    audio = Sound.Ayah(answer.ref),
+                    explanation = "${answer.text}  — from ${quran.suraName(answer.ref.sura)}, ${answer.ref}",
+                    skill = Skills.rule(rule),
+                )
+            }
+        }.shuffled(random)
     }
 }

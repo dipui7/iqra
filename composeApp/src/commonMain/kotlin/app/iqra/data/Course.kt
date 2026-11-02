@@ -12,6 +12,16 @@ enum class LessonKind {
     VowelsPractice,
     /** The "opening letters" (ḥurūf muqaṭṭaʿāt) heard in real recitation. */
     Openings,
+    /** Introduces the unit's [CourseUnit.rule] with examples, then reading questions. */
+    RuleLearn,
+    /** Read practice syllables that use the rule. */
+    RulePractice,
+    /** Spot the rule's mark in real Quran words. */
+    RuleQuran,
+    /** Read practice words mixing every rule so far. */
+    ReadingReview,
+    /** Spot every rule in real Quran words. */
+    QuranMarks,
 }
 
 data class Lesson(val id: String, val title: String, val kind: LessonKind)
@@ -22,6 +32,10 @@ data class CourseUnit(
     val subtitle: String,
     val letters: List<Letter>,
     val lessons: List<Lesson>,
+    /** The reading rule this unit teaches, for units after the short vowels. */
+    val rule: Rule? = null,
+    /** Arabic shown on the unit's card: its letters, or an example of its marks. */
+    val badge: String = letters.joinToString(" ") { it.char },
 )
 
 /** An ayah that consists only of opening letters, with the letters it is made of. */
@@ -54,6 +68,7 @@ object Course {
                 title = "Short vowels",
                 subtitle = "Fatḥa · Kasra · Ḍamma",
                 letters = emptyList(),
+                badge = Harakat.all.joinToString(" ") { Letters.ba.char + it.mark },
                 lessons = listOf(
                     Lesson("u8-learn", "Meet the vowels", LessonKind.VowelsLearn),
                     Lesson("u8-practice", "Read syllables", LessonKind.VowelsPractice),
@@ -69,8 +84,46 @@ object Course {
                     Lesson("u9-review", "Review", LessonKind.Openings),
                 ),
             ),
+            ruleUnit(10, "No vowel", Rules.sukun),
+            ruleUnit(11, "Doubled letters", Rules.shadda),
+            ruleUnit(12, "The \"n\" endings", Rules.tanwin),
+            ruleUnit(13, "Stretching vowels", Rules.long),
+            CourseUnit(
+                id = "u14",
+                title = "Reading words",
+                subtitle = "Everything together",
+                letters = emptyList(),
+                lessons = listOf(
+                    Lesson("u14-read", "Read practice words", LessonKind.ReadingReview),
+                    Lesson("u14-quran", "Marks in the Quran", LessonKind.QuranMarks),
+                    Lesson("u14-review", "Final review", LessonKind.ReadingReview),
+                ),
+            ),
         )
     }
+
+    private fun ruleUnit(n: Int, title: String, rule: Rule) = CourseUnit(
+        id = "u$n",
+        title = title,
+        subtitle = rule.name,
+        letters = emptyList(),
+        rule = rule,
+        badge = when (rule) {
+            Rules.sukun -> Pieces.closed(Letters.ba).arabic
+            Rules.shadda -> Pieces.doubled(Letters.ba, Harakat.fatha).arabic
+            Rules.tanwin -> Pieces.tanwin(Letters.ba, Harakat.damma).arabic
+            else -> Pieces.long(Letters.ba, Harakat.fatha).arabic
+        },
+        lessons = listOf(
+            Lesson("u$n-learn", "Meet ${rule.name.lowercase()}", LessonKind.RuleLearn),
+            Lesson("u$n-practice", "Read with ${rule.name.lowercase()}", LessonKind.RulePractice),
+            Lesson("u$n-quran", "Find it in the Quran", LessonKind.RuleQuran),
+        ),
+    )
+
+    /** Rules taught in this unit and every unit before it. */
+    fun rulesUpTo(unit: CourseUnit): List<Rule> =
+        units.take(units.indexOf(unit) + 1).mapNotNull { it.rule }
 
     val allLessons: List<Lesson> = units.flatMap { it.lessons }
 

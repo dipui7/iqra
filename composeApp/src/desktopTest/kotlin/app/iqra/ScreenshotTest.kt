@@ -65,6 +65,11 @@ class ScreenshotTest {
         val op = b.build(Course.lesson("u9-listen"))
         lessonShot("opening-listen", op.first { it is Exercise.Choice && it.autoPlay })
         lessonShot("opening-letters", op.first { it is Exercise.Choice && !it.autoPlay })
+        val sukun = b.build(Course.lesson("u10-learn"))
+        lessonShot("rule-intro", sukun.first())
+        lessonShot("rule-read", sukun.first { it is Exercise.Choice && it.prompt.startsWith("How") })
+        lessonShot("rule-which", sukun.first { it is Exercise.Choice && it.prompt.startsWith("Which one") })
+        lessonShot("rule-quran", b.build(Course.lesson("u11-quran")).first { it is Exercise.Choice && it.prompt.startsWith("Which word") })
         shot("result") { ResultScreen(LessonResult("u1-learn", true, 15, 92), 3) {} }
     }
 }

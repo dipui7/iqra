@@ -1,0 +1,118 @@
+# Iqra — learn to read the Quran
+
+A Duolingo-style app that teaches adult beginners to read Arabic letters, using
+real Quran text and recitation. One Kotlin codebase builds both an **Android app**
+and a **Windows desktop app** (Compose Multiplatform).
+
+"Iqra" (اقرأ, *read*) is a working name.
+
+## Decisions (made on 2026-11-03)
+
+| Question | Decision |
+|---|---|
+| Platform | Android **and** desktop, from one codebase: Kotlin + Compose Multiplatform |
+| Audience | Adult beginners who don't read Arabic yet; English explanations |
+| First goal | Reading Arabic letters (letters → shapes → short vowels → letters in the Quran) |
+| Quran text | Tanzil Uthmani text v1.1, bundled **unaltered** |
+| Recitation | Mishary Alafasy per-ayah MP3s, **streamed** from EveryAyah at play time, never bundled |
+| Translations | None yet (not needed for letters; their licences differ — check before adding) |
+| Design | Minimal, Apple-like: grouped cards, system-style colours, light + dark mode |
+
+## Content sources and licences
+
+- **Quran text — [Tanzil Project](https://tanzil.net)**, Creative Commons Attribution 3.0.
+  Terms: copy verbatim only, *changing it is not allowed*; credit Tanzil and link to tanzil.net;
+  keep the copyright header. The file is
+  `composeApp/src/commonMain/composeResources/files/quran_uthmani.xml`, exactly as downloaded,
+  header included. A test pins its SHA-256 so any edit fails the build's tests.
+  The app only shows whole ayat, or words split at the spaces already in the text.
+- **Recitation — [EveryAyah](https://everyayah.com)** (Mishary Rashid Alafasy, 128 kbps).
+  EveryAyah publishes no licence, so the app streams from their URLs instead of redistributing
+  files. Before a public release, get permission or switch to a source with explicit terms.
+- **Font — [Amiri Quran](https://github.com/aliftype/amiri)**, SIL Open Font License 1.1
+  (`licenses/AmiriQuran-OFL.txt`).
+- **Lesson text** (letter names, hints, transliterations) is written for this app and is not
+  Quranic text. No Quranic text is generated or altered by AI or code.
+
+All of this is also shown in the app (ⓘ on the home screen).
+
+## What's in the first milestone
+
+9 units, 23 lessons:
+
+1–7. **The 28 letters** in groups of 3–5 (similar shapes together). Each unit has:
+   - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, and for 14 letters
+     a button to hear it recited in the Quran), then recognition questions.
+   - *Practice* — name ↔ letter, sound → letter, start-of-word shape → letter, match pairs.
+   - *Find them in the Quran* — "which word contains Ba?" and "does this word contain Ta?" using
+     real words from Al-Fātiḥah and Juz ʿAmma, with the ayah's audio.
+8. **Short vowels** — fatḥa, kasra, ḍamma; read syllables (بَ = ba).
+9. **Letters in the Quran** — listen to the opening letters (الٓمٓ, يسٓ, طه …) recited and pick
+   the text, or name the letters that make them up.
+
+Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, 5 hearts (lose one per
+mistake, refill one every 20 minutes), wrong answers come back at the end of the lesson,
+lessons unlock in order, completed lessons can be reviewed. Progress is saved locally:
+`%APPDATA%\Iqra\progress.json` on Windows, app storage on Android.
+
+## Run it
+
+Needs JDK 21 (installed). Android SDK is at `D:\Android\sdk` (set in `local.properties`).
+
+Desktop app:
+
+```bash
+./gradlew :composeApp:run
+```
+
+Android APK (install on a phone with USB debugging, or copy the file over):
+
+```bash
+./gradlew :composeApp:assembleDebug
+```
+
+The APK lands in `composeApp/build/outputs/apk/debug/composeApp-debug.apk`.
+
+Tests (lesson generation, untouched Tanzil text, audio decoding, and screenshots of each screen
+into `composeApp/build/screens/`):
+
+```bash
+./gradlew :composeApp:desktopTest
+```
+
+## Code map
+
+```
+composeApp/src/
+  commonMain/kotlin/app/iqra/
+    data/Letters.kt        28 letters, their shapes, sounds; vowel marks
+    data/Quran.kt          loads the Tanzil XML; ayah/word lookup; EveryAyah URLs
+    data/Course.kt         units, lessons, unlock rules, opening-letter ayat
+    engine/Exercise.kt     exercise types (intro cards, multiple choice, match pairs)
+    engine/LessonBuilder.kt  turns a lesson into a shuffled list of exercises
+    engine/LessonSession.kt  one lesson in progress: answers, hearts, re-asking mistakes
+    engine/Progress.kt     XP, streak, hearts, saving
+    ui/                    Home, Lesson, Result, About screens; theme
+    Platform.kt            expect: storage, audio, date, back button
+  androidMain/             MediaPlayer audio, files dir storage, MainActivity
+  desktopMain/             JLayer MP3 audio, %APPDATA% storage, window
+  desktopTest/             tests + screenshot renderer
+```
+
+## What comes next
+
+Roughly in order of value:
+
+1. **Letter sounds audio.** Only 14 letters can be heard (via the Quran's opening letters).
+   Record or license clean recordings of all 28 letters and the vowel syllables.
+2. **More reading units:** sukūn, shadda, tanwīn, long vowels (ا و ي), then reading whole
+   words and short ayat of Juz ʿAmma with word-by-word highlighting.
+3. **Hifz (memorisation) track** for Juz ʿAmma: ayah ordering, fill the missing word,
+   listen-and-continue, recite-along.
+4. **Tajweed basics** (qalqala, ghunna, madd) with colour-coded text — Tanzil offers tajweed data.
+5. **Meaning** — word-by-word meanings once a translation with clear terms is chosen.
+6. **Review system** — spaced repetition of weak letters, a "practice to earn hearts" mode,
+   daily goal setting, reminders.
+7. **Release prep** — app icon, signed release APK / Play Store listing, Windows installer
+   (`./gradlew packageMsi` needs WiX), audio permission from EveryAyah or another source,
+   offline audio caching.

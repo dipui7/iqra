@@ -1,0 +1,4 @@
+# Keep the Tanzil Quran text byte-for-byte as downloaded (its licence forbids changes).
+*.xml -text
+*.ttf binary
+gradlew text eol=lf

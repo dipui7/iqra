@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import app.iqra.data.Course
 
 @Composable
 fun ResultScreen(result: LessonResult, streak: Int, onContinue: () -> Unit) {
@@ -38,11 +37,15 @@ fun ResultScreen(result: LessonResult, streak: Int, onContinue: () -> Unit) {
         }
         Spacer(Modifier.height(24.dp))
         Text(
-            if (result.passed) "Lesson complete" else "Out of hearts",
+            when {
+                !result.passed -> "Out of hearts"
+                result.practice -> "Practice complete"
+                else -> "Lesson complete"
+            },
             style = MaterialTheme.typography.displaySmall, color = palette.text,
         )
         Text(
-            if (result.passed) Course.lesson(result.lessonId).title
+            if (result.passed) result.title
             else "Mistakes are how we learn. Your hearts refill over time — try again soon.",
             color = palette.secondary, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp),
         )
@@ -51,7 +54,8 @@ fun ResultScreen(result: LessonResult, streak: Int, onContinue: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ResultStat("+${result.xp}", "XP", palette.accent, Modifier.weight(1f))
                 ResultStat("${result.accuracy}%", "Accuracy", palette.correct, Modifier.weight(1f))
-                ResultStat("$streak", if (streak == 1) "Day streak" else "Days streak", palette.streak, Modifier.weight(1f))
+                if (result.heartGained) ResultStat("+1", "Heart", palette.heart, Modifier.weight(1f))
+                else ResultStat("$streak", if (streak == 1) "Day streak" else "Days streak", palette.streak, Modifier.weight(1f))
             }
         }
         Spacer(Modifier.weight(1f))

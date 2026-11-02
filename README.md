@@ -38,7 +38,7 @@ All of this is also shown in the app (ⓘ on the home screen).
 
 ## What's in the first milestone
 
-14 units, 38 lessons:
+14 units, 40 lessons:
 
 1–7. **The 28 letters** in groups of 3–5 (similar shapes together). Each unit has:
    - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, buttons to hear
@@ -59,9 +59,15 @@ All of this is also shown in the app (ⓘ on the home screen).
    lesson text, not Quranic text.
 14. **Reading words** — mixed practice words, every mark in real Quran words, final review.
 
-Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, 5 hearts (lose one per
-mistake, refill one every 20 minutes), wrong answers come back at the end of the lesson,
-lessons unlock in order, completed lessons can be reviewed. Progress is saved locally:
+Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, daily XP goal (10/20/30/50,
+set in Settings), 5 hearts (lose one per mistake, refill one every 20 minutes), wrong answers
+come back at the end of the lesson, lessons unlock in order, completed lessons can be reviewed.
+
+**Review system.** Every question is tagged with what it practises (a letter, a vowel, a rule).
+Each of these has a Leitner-style schedule: a right answer moves it up a box and pushes its
+next review out (1, 2, 4, 8, 16 days), a wrong one sends it back to today. The *Practice* card
+on the home screen builds a session from what is due, weakest first. Practice costs no hearts
+and gives one back, so it is also the way to keep going when hearts run out. Progress is saved locally:
 `%APPDATA%\Iqra\progress.json` on Windows, app storage on Android.
 
 ## Letter sounds
@@ -131,8 +137,9 @@ composeApp/src/
     engine/Exercise.kt     exercise types (intro cards, multiple choice, match pairs)
     engine/LessonBuilder.kt  turns a lesson into a shuffled list of exercises
     engine/LessonSession.kt  one lesson in progress: answers, hearts, re-asking mistakes
-    engine/Progress.kt     XP, streak, hearts, saving
-    ui/                    Home, Lesson, Result, About screens; theme
+    engine/Progress.kt     XP, streak, hearts, daily goal, review schedule, saving
+    engine/Skills.kt       names of what questions practise (letter:ba, rule:shadda …)
+    ui/                    Home, Lesson, Result, Settings, About screens; theme
     Platform.kt            expect: storage, audio, date, back button
   androidMain/             MediaPlayer audio, files dir storage, MainActivity
   desktopMain/             JLayer MP3 audio, %APPDATA% storage, window
@@ -151,8 +158,8 @@ Roughly in order of value:
    listen-and-continue, recite-along.
 4. **Tajweed basics** (qalqala, ghunna, madd) with colour-coded text — Tanzil offers tajweed data.
 5. **Meaning** — word-by-word meanings once a translation with clear terms is chosen.
-6. **Review system** — spaced repetition of weak letters, a "practice to earn hearts" mode,
-   daily goal setting, reminders.
+6. **Review system** — ~~spaced repetition, practice to earn hearts, daily goal~~ (done);
+   next: reminders (notifications).
 7. **Release prep** — app icon, signed release APK / Play Store listing, Windows installer
    (`./gradlew packageMsi` needs WiX), audio permission from EveryAyah or another source,
    offline audio caching.

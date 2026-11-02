@@ -42,7 +42,7 @@ class ScreenshotTest {
     }
 
     private fun lessonShot(name: String, exercise: Exercise) = shot(name) {
-        LessonScreen("u1-learn", listOf(exercise), ProgressStore(), {}, {})
+        LessonScreen("u1-learn", "Meet the letters", listOf(exercise), ProgressStore(), {}, {})
     }
 
     @Test
@@ -70,6 +70,6 @@ class ScreenshotTest {
         lessonShot("rule-read", sukun.first { it is Exercise.Choice && it.prompt.startsWith("How") })
         lessonShot("rule-which", sukun.first { it is Exercise.Choice && it.prompt.startsWith("Which one") })
         lessonShot("rule-quran", b.build(Course.lesson("u11-quran")).first { it is Exercise.Choice && it.prompt.startsWith("Which word") })
-        shot("result") { ResultScreen(LessonResult("u1-learn", true, 15, 92), 3) {} }
+        shot("result") { ResultScreen(LessonResult("Meet the letters", true, 15, 92), 3) {} }
     }
 }

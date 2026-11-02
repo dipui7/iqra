@@ -19,6 +19,10 @@ class LessonSession(
     exercises: List<Exercise>,
     startHearts: Int,
     private val onMistake: () -> Unit,
+    /** Called for every graded multiple-choice answer, to update the review schedule. */
+    private val onAnswer: (Exercise.Choice, Boolean) -> Unit = { _, _ -> },
+    /** In practice sessions mistakes cost no hearts, so they can be done with none left. */
+    private val heartsMatter: Boolean = true,
 ) {
     private val queue = mutableStateListOf<Exercise>().apply { addAll(exercises) }
     private val total = exercises.size
@@ -38,13 +42,15 @@ class LessonSession(
     val current: Exercise? get() = queue.getOrNull(index)
     val progress: Float get() = solved.toFloat() / total
     val finished: Boolean get() = index >= queue.size
-    val outOfHearts: Boolean get() = hearts <= 0
+    val outOfHearts: Boolean get() = heartsMatter && hearts <= 0
+    val usesHearts: Boolean get() = heartsMatter
     val questionCount: Int get() = total
 
     /** Grade the selected option of the current multiple-choice question. */
     fun check() {
         val choice = current as? Exercise.Choice ?: return
         val pick = selected ?: return
+        onAnswer(choice, pick == choice.correct)
         if (pick == choice.correct) {
             solved++
             feedback = Feedback.Correct
@@ -58,6 +64,7 @@ class LessonSession(
     /** A wrong pair in a matching exercise: costs a heart but the exercise carries on. */
     fun registerMistake() {
         mistakes++
+        if (!heartsMatter) return
         hearts--
         onMistake()
     }

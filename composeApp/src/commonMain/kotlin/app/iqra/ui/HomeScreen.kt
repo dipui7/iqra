@@ -26,6 +26,8 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -56,16 +58,24 @@ import app.iqra.nowMillis
 import app.iqra.todayEpochDay
 
 @Composable
-fun HomeScreen(progress: Progress, onStart: (String) -> Unit, onAbout: () -> Unit) {
+fun HomeScreen(
+    progress: Progress,
+    onStart: (String) -> Unit,
+    onAbout: () -> Unit,
+    onPractice: () -> Unit = {},
+    onSettings: () -> Unit = {},
+) {
     var noHearts by remember { mutableStateOf(false) }
     val start = { id: String -> if (progress.hearts > 0) onStart(id) else noHearts = true }
+    val today = todayEpochDay()
 
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { Header(progress, onAbout) }
+        item { Header(progress, onAbout, onSettings) }
+        if (progress.skills.isNotEmpty()) item { PracticeCard(progress.dueCount(today), progress.hearts < MAX_HEARTS, onPractice) }
         items(Course.units, key = { it.id }) { unit -> UnitCard(unit, progress, start) }
         item {
             Text(
@@ -82,15 +92,27 @@ fun HomeScreen(progress: Progress, onStart: (String) -> Unit, onAbout: () -> Uni
         val minutes = ((progress.msUntilNextHeart(nowMillis()) ?: 0) / 60_000) + 1
         AlertDialog(
             onDismissRequest = { noHearts = false },
-            confirmButton = { TextButton({ noHearts = false }) { Text("OK") } },
+            confirmButton = {
+                if (progress.skills.isNotEmpty()) {
+                    TextButton({ noHearts = false; onPractice() }) { Text("Practise") }
+                } else {
+                    TextButton({ noHearts = false }) { Text("OK") }
+                }
+            },
+            dismissButton = if (progress.skills.isNotEmpty()) ({ TextButton({ noHearts = false }) { Text("Later") } }) else null,
             title = { Text("Out of hearts") },
-            text = { Text("Take a short break. Your next heart arrives in about $minutes min.") },
+            text = {
+                Text(
+                    "Your next heart arrives in about $minutes min." +
+                        if (progress.skills.isNotEmpty()) " Or practise what you've learned to earn one now — practice costs no hearts." else "",
+                )
+            },
         )
     }
 }
 
 @Composable
-private fun Header(progress: Progress, onAbout: () -> Unit) {
+private fun Header(progress: Progress, onAbout: () -> Unit, onSettings: () -> Unit) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -98,6 +120,7 @@ private fun Header(progress: Progress, onAbout: () -> Unit) {
                 Text("Learn to read the Quran, letter by letter", color = palette.secondary)
             }
             IconButton(onClick = onAbout) { Icon(Icons.Rounded.Info, "Sources and licences", tint = palette.secondary) }
+            IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = palette.secondary) }
         }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -105,6 +128,58 @@ private fun Header(progress: Progress, onAbout: () -> Unit) {
             Stat(Icons.Rounded.Bolt, palette.accent, "${progress.xp}", "XP", Modifier.weight(1f))
             Stat(Icons.Rounded.Favorite, palette.heart, "${progress.hearts}/$MAX_HEARTS", heartsLabel(progress), Modifier.weight(1f))
         }
+        Spacer(Modifier.height(10.dp))
+        DailyGoal(progress.xpOn(todayEpochDay()), progress.dailyGoal)
+    }
+}
+
+@Composable
+private fun DailyGoal(xp: Int, goal: Int) {
+    val done = xp >= goal
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(palette.card).padding(horizontal = 14.dp, vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Daily goal", style = MaterialTheme.typography.bodyMedium, color = palette.text, modifier = Modifier.weight(1f))
+            Text(
+                if (done) "Done · $xp XP" else "$xp / $goal XP",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (done) palette.correct else palette.secondary,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        LinearProgressIndicator(
+            progress = { (xp.toFloat() / goal).coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(6.dp),
+            color = if (done) palette.correct else palette.streak,
+            trackColor = palette.separator,
+            strokeCap = StrokeCap.Round,
+            gapSize = 0.dp,
+            drawStopIndicator = {},
+        )
+    }
+}
+
+@Composable
+private fun PracticeCard(due: Int, canEarnHeart: Boolean, onPractice: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card).clickable(onClick = onPractice)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(palette.accentSoft), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Refresh, null, tint = palette.accent, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Practice", style = MaterialTheme.typography.titleMedium, color = palette.text)
+            Text(
+                buildString {
+                    append(if (due > 0) "$due to review today" else "Strengthen your weakest letters")
+                    if (canEarnHeart) append(" · earns a heart")
+                },
+                style = MaterialTheme.typography.bodyMedium, color = palette.secondary,
+            )
+        }
+        Icon(Icons.Rounded.PlayArrow, "Start practice", tint = palette.accent)
     }
 }
 

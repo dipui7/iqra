@@ -16,7 +16,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import app.iqra.data.Course
 import app.iqra.data.LetterAudio
+import app.iqra.data.Letters
+import app.iqra.engine.Skills
 import app.iqra.data.QuranText
 import app.iqra.engine.LessonBuilder
 import app.iqra.engine.ProgressStore
@@ -27,6 +30,7 @@ import app.iqra.ui.IqraTheme
 import app.iqra.ui.LessonResult
 import app.iqra.ui.LessonScreen
 import app.iqra.ui.ResultScreen
+import app.iqra.ui.SettingsScreen
 import app.iqra.ui.palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -35,7 +39,9 @@ import kotlinx.coroutines.withContext
 private sealed interface Screen {
     data object Home : Screen
     data object About : Screen
+    data object Settings : Screen
     data class Lesson(val id: String, val attempt: Int) : Screen
+    data class Practice(val attempt: Int) : Screen
     data class Result(val result: LessonResult) : Screen
 }
 
@@ -84,16 +90,37 @@ fun App() {
                     progress = store.progress,
                     onStart = { id -> screen = Screen.Lesson(id, ++attempts) },
                     onAbout = { screen = Screen.About },
+                    onPractice = { screen = Screen.Practice(++attempts) },
+                    onSettings = { screen = Screen.Settings },
                 )
                 Screen.About -> AboutScreen(onBack = { screen = Screen.Home })
+                Screen.Settings -> SettingsScreen(store, onBack = { screen = Screen.Home })
                 is Screen.Lesson -> {
-                    val exercises = remember(s) { LessonBuilder(q, audio = audio).build(app.iqra.data.Course.lesson(s.id)) }
+                    val lesson = remember(s) { Course.lesson(s.id) }
+                    val exercises = remember(s) { LessonBuilder(q, audio = audio).build(lesson) }
                     LessonScreen(
                         lessonId = s.id,
+                        title = lesson.title,
                         exercises = exercises,
                         store = store,
                         onClose = { screen = Screen.Home },
                         onFinished = { screen = Screen.Result(it) },
+                    )
+                }
+                is Screen.Practice -> {
+                    val exercises = remember(s) {
+                        val builder = LessonBuilder(q, audio = audio)
+                        builder.practice(store.progress.skillsToPractise(todayEpochDay()))
+                            .ifEmpty { builder.practice(Letters.all.take(4).map(Skills::letter)) }
+                    }
+                    LessonScreen(
+                        lessonId = "practice",
+                        title = "Practice",
+                        exercises = exercises,
+                        store = store,
+                        onClose = { screen = Screen.Home },
+                        onFinished = { screen = Screen.Result(it) },
+                        practice = true,
                     )
                 }
                 is Screen.Result -> ResultScreen(

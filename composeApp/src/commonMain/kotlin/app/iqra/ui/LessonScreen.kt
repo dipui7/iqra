@@ -59,8 +59,10 @@ import app.iqra.engine.Exercise
 import app.iqra.engine.Feedback
 import app.iqra.engine.LESSON_XP
 import app.iqra.engine.LessonSession
+import app.iqra.engine.MAX_HEARTS
 import app.iqra.engine.Option
 import app.iqra.engine.PERFECT_BONUS_XP
+import app.iqra.engine.PRACTICE_XP
 import app.iqra.engine.ProgressStore
 import app.iqra.playAudio
 import app.iqra.playAudioBytes
@@ -70,25 +72,47 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-data class LessonResult(val lessonId: String, val passed: Boolean, val xp: Int, val accuracy: Int)
+data class LessonResult(
+    val title: String,
+    val passed: Boolean,
+    val xp: Int,
+    val accuracy: Int,
+    /** A practice session, which also gives a heart back if any were missing. */
+    val practice: Boolean = false,
+    val heartGained: Boolean = false,
+)
 
 @Composable
 fun LessonScreen(
     lessonId: String,
+    title: String,
     exercises: List<Exercise>,
     store: ProgressStore,
     onClose: () -> Unit,
     onFinished: (LessonResult) -> Unit,
+    /** A practice session: mistakes cost no hearts, and finishing gives one back. */
+    practice: Boolean = false,
 ) {
-    val session = remember { LessonSession(exercises, store.progress.hearts, onMistake = store::loseHeart) }
+    val session = remember {
+        LessonSession(
+            exercises, store.progress.hearts,
+            onMistake = store::loseHeart,
+            onAnswer = { question, right -> question.skill?.let { store.recordAnswer(it, right) } },
+            heartsMatter = !practice,
+        )
+    }
 
     fun finish(passed: Boolean) {
         stopAudio()
         val questions = exercises.count { it !is Exercise.LetterIntro && it !is Exercise.RuleIntro }
         val accuracy = if (questions == 0) 100 else (100 * questions / (questions + session.mistakes))
-        val xp = if (passed) LESSON_XP + if (session.mistakes == 0) PERFECT_BONUS_XP else 0 else 0
-        if (passed) store.completeLesson(lessonId, xp)
-        onFinished(LessonResult(lessonId, passed, xp, accuracy))
+        val base = if (practice) PRACTICE_XP else LESSON_XP
+        val xp = if (passed) base + if (session.mistakes == 0) PERFECT_BONUS_XP else 0 else 0
+        val heartGained = passed && practice && store.progress.hearts < MAX_HEARTS
+        if (passed) {
+            if (practice) store.completePractice(xp) else store.completeLesson(lessonId, xp)
+        }
+        onFinished(LessonResult(title, passed, xp, accuracy, practice, heartGained))
     }
 
     LaunchedEffect(session.finished) { if (session.finished) finish(passed = true) }
@@ -132,9 +156,13 @@ private fun TopBar(session: LessonSession, onClose: () -> Unit) {
             drawStopIndicator = {},
         )
         Spacer(Modifier.width(14.dp))
-        Icon(Icons.Rounded.Favorite, "Hearts", tint = palette.heart, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("${session.hearts}", style = MaterialTheme.typography.titleMedium, color = palette.heart)
+        if (session.usesHearts) {
+            Icon(Icons.Rounded.Favorite, "Hearts", tint = palette.heart, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("${session.hearts}", style = MaterialTheme.typography.titleMedium, color = palette.heart)
+        } else {
+            Text("Practice", style = MaterialTheme.typography.titleMedium, color = palette.accent)
+        }
     }
 }
 

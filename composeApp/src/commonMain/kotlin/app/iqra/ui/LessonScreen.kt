@@ -53,8 +53,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import app.iqra.data.AyahRef
-import app.iqra.data.Letter
+import app.iqra.data.Letters
+import app.iqra.data.Sound
 import app.iqra.engine.Exercise
 import app.iqra.engine.Feedback
 import app.iqra.engine.LESSON_XP
@@ -63,8 +63,12 @@ import app.iqra.engine.Option
 import app.iqra.engine.PERFECT_BONUS_XP
 import app.iqra.engine.ProgressStore
 import app.iqra.playAudio
+import app.iqra.playAudioBytes
+import app.iqra.resources.Res
 import app.iqra.stopAudio
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 data class LessonResult(val lessonId: String, val passed: Boolean, val xp: Int, val accuracy: Int)
 
@@ -101,7 +105,7 @@ fun LessonScreen(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 when (exercise) {
-                    is Exercise.LetterIntro -> LetterIntro(exercise.letter)
+                    is Exercise.LetterIntro -> LetterIntro(exercise)
                     is Exercise.VowelIntro -> VowelIntro(exercise)
                     is Exercise.Choice -> ChoiceQuestion(exercise, session)
                     is Exercise.Match -> MatchQuestion(exercise, session)
@@ -137,12 +141,20 @@ private fun TopBar(session: LessonSession, onClose: () -> Unit) {
 // --- Teaching cards --------------------------------------------------------------------
 
 @Composable
-private fun LetterIntro(letter: Letter) {
+private fun LetterIntro(intro: Exercise.LetterIntro) {
+    val letter = intro.letter
     Label("NEW LETTER")
     Card {
         Text(letter.char, style = arabicStyle(110, lineFactor = 1.4), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Text(letter.name, style = MaterialTheme.typography.titleLarge, color = palette.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Text(letter.hint, color = palette.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+    }
+    if (intro.name != null || intro.sound != null) {
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            intro.name?.let { AudioButton(it, "Its name") }
+            intro.sound?.let { AudioButton(it, "Its sound: ${letter.sound}a") }
+        }
     }
     Spacer(Modifier.height(16.dp))
     Label(if (letter.joins) "ITS SHAPES IN A WORD" else "DOES NOT JOIN TO THE NEXT LETTER")
@@ -163,8 +175,10 @@ private fun LetterIntro(letter: Letter) {
         }
     }
     letter.quranExample?.let { ref ->
-        Spacer(Modifier.height(16.dp))
-        AudioButton(ref, "Hear ${letter.name} recited (start of ${ref})")
+        // The whole ayah plays, so say exactly what will be heard: this is the letter's name
+        // inside real recitation, not the letter's sound on its own.
+        Label("HEAR ITS NAME IN THE QURAN")
+        AudioButton(Sound.Ayah(ref), "${Letters.quranExampleRecited[ref] ?: "Ayah"} ($ref)")
     }
 }
 
@@ -177,13 +191,25 @@ private fun VowelIntro(intro: Exercise.VowelIntro) {
     }
     Spacer(Modifier.height(16.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        intro.examples.forEach { (arabic, latin) ->
+        intro.examples.forEach { syllable ->
+            val play = rememberSoundPlayer(syllable.sound)
             Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(palette.card).padding(vertical = 10.dp),
+                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(palette.card)
+                    .then(if (play != null) Modifier.clickable { play.toggle() } else Modifier)
+                    .padding(vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(arabic, style = arabicStyle(48))
-                Text(latin, style = MaterialTheme.typography.titleMedium, color = palette.accent)
+                Text(syllable.arabic, style = arabicStyle(48))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(syllable.latin, style = MaterialTheme.typography.titleMedium, color = palette.accent)
+                    if (play != null) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            if (play.playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp,
+                            "Play ${syllable.latin}", tint = palette.accent, modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
             }
         }
     }
@@ -209,8 +235,12 @@ private fun ChoiceQuestion(q: Exercise.Choice, session: LessonSession) {
     }
     if (q.audio != null) {
         // For "listen" questions the audio is the question; otherwise it is optional context.
-        val label = if (q.autoPlay) "Play again" else if (q.big != null) "Listen to the ayah" else "Listen"
-        val showNow = q.autoPlay || session.feedback != null || q.big != null
+        val label = when {
+            q.autoPlay -> "Play again"
+            q.audio is Sound.Ayah && q.big != null -> "Listen to the ayah"
+            else -> "Listen"
+        }
+        val showNow = session.feedback != null || q.autoPlay || (q.big != null && !q.audioAfterAnswer)
         if (showNow) {
             AudioButton(q.audio, label, autoPlay = q.autoPlay)
             Spacer(Modifier.height(12.dp))
@@ -415,21 +445,49 @@ private fun Card(content: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card).padding(16.dp)) { content() }
 }
 
-@Composable
-fun AudioButton(ref: AyahRef, label: String, autoPlay: Boolean = false) {
-    var playing by remember(ref) { mutableStateOf(false) }
-    val toggle = {
+/** Plays one [Sound] and tracks whether it is playing. */
+class SoundPlayer internal constructor(
+    private val sound: Sound,
+    private val launch: (suspend () -> Unit) -> Unit,
+) {
+    var playing by mutableStateOf(false)
+        private set
+
+    fun toggle() {
         if (playing) {
+            playing = false
             stopAudio()
-        } else {
-            playing = true
-            playAudio(ref.audioUrl) { playing = false }
+            return
+        }
+        playing = true
+        when (val s = sound) {
+            is Sound.Ayah -> playAudio(s.ref.audioUrl) { playing = false }
+            is Sound.Clip -> launch {
+                val bytes = runCatching { Res.readBytes(s.path) }.getOrNull()
+                // Stopped while loading, or the file is missing: don't start.
+                if (bytes == null || !playing) playing = false
+                else playAudioBytes(bytes) { playing = false }
+            }
         }
     }
-    LaunchedEffect(ref) { if (autoPlay) toggle() }
-    DisposableEffect(ref) { onDispose { if (playing) stopAudio() } }
+}
+
+@Composable
+fun rememberSoundPlayer(sound: Sound?): SoundPlayer? {
+    if (sound == null) return null
+    val scope = rememberCoroutineScope()
+    val player = remember(sound) { SoundPlayer(sound) { block -> scope.launch { block() } } }
+    DisposableEffect(player) { onDispose { if (player.playing) stopAudio() } }
+    return player
+}
+
+@Composable
+fun AudioButton(sound: Sound, label: String, autoPlay: Boolean = false) {
+    val player = rememberSoundPlayer(sound)!!
+    val playing = player.playing
+    LaunchedEffect(sound) { if (autoPlay) player.toggle() }
     Row(
-        Modifier.clip(RoundedCornerShape(50)).background(palette.accentSoft).clickable(onClick = toggle)
+        Modifier.clip(RoundedCornerShape(50)).background(palette.accentSoft).clickable { player.toggle() }
             .padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

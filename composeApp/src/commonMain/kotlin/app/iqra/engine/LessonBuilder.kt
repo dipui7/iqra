@@ -7,14 +7,23 @@ import app.iqra.data.Harakat
 import app.iqra.data.Lesson
 import app.iqra.data.LessonKind
 import app.iqra.data.Letter
+import app.iqra.data.LetterAudio
 import app.iqra.data.Letters
 import app.iqra.data.Opening
 import app.iqra.data.QuranText
 import app.iqra.data.QuranWord
+import app.iqra.data.Sound
 import kotlin.random.Random
 
-/** Turns a lesson from the course outline into a concrete, shuffled list of exercises. */
-class LessonBuilder(private val quran: QuranText, private val random: Random = Random.Default) {
+/**
+ * Turns a lesson from the course outline into a concrete, shuffled list of exercises.
+ * Listening questions about single letters are only made for letters whose recordings are in [audio].
+ */
+class LessonBuilder(
+    private val quran: QuranText,
+    private val random: Random = Random.Default,
+    private val audio: LetterAudio = LetterAudio.none,
+) {
 
     fun build(lesson: Lesson): List<Exercise> {
         val unit = Course.unitOf(lesson.id)
@@ -29,16 +38,22 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
     }
 
     private fun learn(unit: CourseUnit): List<Exercise> {
-        val intros = unit.letters.flatMap { listOf(Exercise.LetterIntro(it), letterToName(it, unit)) }
-        val review = unit.letters.shuffled(random).map { nameToLetter(it, unit) }
-        return intros + review
+        val intros = unit.letters.flatMap { letter ->
+            listOfNotNull(
+                Exercise.LetterIntro(letter, name = audio.name(letter), sound = audio.sound(letter)),
+                letterToName(letter, unit),
+                hearSound(letter, unit),
+            )
+        }
+        val review = unit.letters.shuffled(random).flatMap { listOfNotNull(nameToLetter(it, unit), hearName(it, unit)) }
+        return intros + review.shuffled(random)
     }
 
     private fun practice(unit: CourseUnit): List<Exercise> {
         val letters = unit.letters
         val questions = letters.flatMap { letter ->
             buildList {
-                add(soundToLetter(letter, unit))
+                add(hearSound(letter, unit) ?: soundToLetter(letter, unit))
                 if (letter.joins) add(formToLetter(letter, unit)) else add(letterToName(letter, unit))
                 add(nameToLetter(letter, unit))
             }
@@ -64,13 +79,18 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
     private fun vowelsLearn(): List<Exercise> {
         val sample = listOf(Letters.ba, Letters.ta, Letters.mim)
         return Harakat.all.flatMap { h ->
-            val examples = sample.map { it.char + h.mark to it.sound + h.sound }
+            val examples = sample.map { syllable(it, h) }
             listOf(Exercise.VowelIntro(h, examples), readSyllable(sample.random(random), h))
         } + List(4) { readSyllable(consonants.random(random), Harakat.all.random(random)) }
     }
 
     private fun vowelsPractice(): List<Exercise> =
-        List(10) { readSyllable(consonants.random(random), Harakat.all.random(random)) } +
+        List(10) {
+            val letter = consonants.random(random)
+            val h = Harakat.all.random(random)
+            // Half the questions are listening ones, where the syllable has been recorded.
+            (if (it % 2 == 0) hearSyllable(letter, h) else null) ?: readSyllable(letter, h)
+        } +
             Exercise.Match(
                 prompt = "Match each syllable to its sound",
                 pairs = consonants.shuffled(random).take(4).map { letter ->
@@ -90,7 +110,7 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
                 prompt = "Listen. Which opening is recited?",
                 options = choices.map { Option(quran.text(it.ref), arabic = true) },
                 correct = choices.indexOf(opening),
-                audio = opening.ref,
+                audio = Sound.Ayah(opening.ref),
                 autoPlay = true,
                 explanation = "${namesOf(opening)} — $sura",
             ),
@@ -100,7 +120,7 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
                 caption = sura,
                 options = choices.map { Option(namesOf(it), arabic = false) },
                 correct = choices.indexOf(opening),
-                audio = opening.ref,
+                audio = Sound.Ayah(opening.ref),
             ),
         )
     }.take(10)
@@ -124,6 +144,7 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
         bigArabic: Boolean,
         label: (Letter) -> Option,
         caption: String? = null,
+        listenTo: Sound? = null,
     ): Exercise.Choice {
         val choices = (distractors(letter, unit) + letter).shuffled(random)
         return Exercise.Choice(
@@ -133,6 +154,11 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
             caption = caption,
             options = choices.map(label),
             correct = choices.indexOf(letter),
+            // A listening question plays its clip straight away; any other question offers the
+            // letter's name after it is answered, so every answer is also heard.
+            audio = listenTo ?: audio.name(letter),
+            autoPlay = listenTo != null,
+            audioAfterAnswer = listenTo == null,
             explanation = "${letter.char}  is ${letter.name}: ${letter.hint}",
         )
     }
@@ -152,6 +178,45 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
         label = { Option(it.char, arabic = true) },
     )
 
+    /** "Listen. Which letter is this?" — the letter's name is played. */
+    private fun hearName(letter: Letter, unit: CourseUnit?): Exercise.Choice? {
+        val clip = audio.name(letter) ?: return null
+        return lettersChoice(
+            "Listen. Which letter is this?", letter, unit, big = null, bigArabic = false,
+            label = { Option(it.char, arabic = true) }, listenTo = clip,
+        )
+    }
+
+    /** "Listen. Which letter makes this sound?" — the letter read with fatḥa ("ba") is played. */
+    private fun hearSound(letter: Letter, unit: CourseUnit?): Exercise.Choice? {
+        val clip = audio.sound(letter) ?: return null
+        return lettersChoice(
+            "Listen. Which letter makes this sound?", letter, unit, big = null, bigArabic = false,
+            label = { Option(it.char, arabic = true) }, listenTo = clip,
+        ).copy(explanation = "${letter.char}َ  is read \"${letter.sound}a\" — ${letter.hint}")
+    }
+
+    private fun syllable(letter: Letter, h: Haraka) =
+        Syllable(letter.char + h.mark, letter.sound + h.sound, audio.syllable(letter, h))
+
+    /** "Listen. Which did you hear?" — choose between the same letter with other vowels, and a look-alike. */
+    private fun hearSyllable(letter: Letter, h: Haraka): Exercise.Choice? {
+        val clip = audio.syllable(letter, h) ?: return null
+        val right = syllable(letter, h)
+        val wrong = (Harakat.all - h).map { syllable(letter, it) } +
+            distractors(letter, Course.units.firstOrNull { letter in it.letters }, 1)
+                .filter { it != Letters.alif }.map { syllable(it, h) }
+        val choices = (wrong + right).shuffled(random)
+        return Exercise.Choice(
+            prompt = "Listen. Which did you hear?",
+            options = choices.map { Option(it.arabic, arabic = true) },
+            correct = choices.indexOf(right),
+            audio = clip,
+            autoPlay = true,
+            explanation = "${right.arabic}  is read \"${right.latin}\": ${letter.name} with ${h.name}",
+        )
+    }
+
     private fun formToLetter(letter: Letter, unit: CourseUnit?) = lettersChoice(
         "This is a letter at the start of a word. Which letter is it?", letter, unit,
         big = letter.initial, bigArabic = true,
@@ -169,6 +234,8 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
             big = letter.char + h.mark,
             options = choices.map { Option(it, arabic = false) },
             correct = choices.indexOf(right),
+            audio = audio.syllable(letter, h),
+            audioAfterAnswer = true,
             explanation = "${letter.name} with ${h.name} is read \"$right\"",
         )
     }
@@ -184,7 +251,7 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
             options = choices.map { Option(it.text, arabic = true) },
             correct = choices.indexOf(answer),
             caption = "Words from Juz ʿAmma and Al-Fātiḥah",
-            audio = answer.ref,
+            audio = Sound.Ayah(answer.ref),
             explanation = "${answer.text}  — from ${quran.suraName(answer.ref.sura)}, ${answer.ref}",
         )
     }
@@ -199,7 +266,7 @@ class LessonBuilder(private val quran: QuranText, private val random: Random = R
             caption = "${quran.suraName(word.ref.sura)} · ${word.ref}",
             options = listOf(Option("Yes", arabic = false), Option("No", arabic = false)),
             correct = if (wantYes) 0 else 1,
-            audio = word.ref,
+            audio = Sound.Ayah(word.ref),
         )
     }
 }

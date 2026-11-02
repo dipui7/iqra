@@ -1,16 +1,22 @@
 package app.iqra.engine
 
-import app.iqra.data.AyahRef
 import app.iqra.data.Haraka
 import app.iqra.data.Letter
+import app.iqra.data.Sound
 
 data class Option(val label: String, val arabic: Boolean)
 
-sealed interface Exercise {
-    /** A teaching card with no question; the learner just reads it and continues. */
-    data class LetterIntro(val letter: Letter) : Exercise
+/** A letter with a vowel mark, e.g. بَ read "ba", and its recording if there is one. */
+data class Syllable(val arabic: String, val latin: String, val sound: Sound? = null)
 
-    data class VowelIntro(val haraka: Haraka, val examples: List<Pair<String, String>>) : Exercise
+sealed interface Exercise {
+    /**
+     * A teaching card with no question; the learner just reads it and continues.
+     * [name] says the letter's name, [sound] reads it with fatḥa ("ba"), when recorded.
+     */
+    data class LetterIntro(val letter: Letter, val name: Sound? = null, val sound: Sound? = null) : Exercise
+
+    data class VowelIntro(val haraka: Haraka, val examples: List<Syllable>) : Exercise
 
     /**
      * A multiple-choice question. Almost every question type in the course is one of these:
@@ -23,9 +29,11 @@ sealed interface Exercise {
         val big: String? = null,
         val bigArabic: Boolean = true,
         val caption: String? = null,
-        val audio: AyahRef? = null,
+        val audio: Sound? = null,
         /** Play [audio] as soon as the question appears (listening questions). */
         val autoPlay: Boolean = false,
+        /** Offer [audio] only after answering, because hearing it would give the answer away. */
+        val audioAfterAnswer: Boolean = false,
         val explanation: String? = null,
     ) : Exercise
 

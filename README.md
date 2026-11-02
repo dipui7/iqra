@@ -41,8 +41,10 @@ All of this is also shown in the app (ⓘ on the home screen).
 9 units, 23 lessons:
 
 1–7. **The 28 letters** in groups of 3–5 (similar shapes together). Each unit has:
-   - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, and for 14 letters
-     a button to hear it recited in the Quran), then recognition questions.
+   - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, buttons to hear
+     its name and its sound, and for 14 letters the ayah where its name is recited in the
+     Quran, labelled with exactly what is heard, e.g. "Alif · Lām · Mīm (2:1)"), then
+     recognition and listening questions.
    - *Practice* — name ↔ letter, sound → letter, start-of-word shape → letter, match pairs.
    - *Find them in the Quran* — "which word contains Ba?" and "does this word contain Ta?" using
      real words from Al-Fātiḥah and Juz ʿAmma, with the ayah's audio.
@@ -54,6 +56,35 @@ Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, 5 hearts (l
 mistake, refill one every 20 minutes), wrong answers come back at the end of the lesson,
 lessons unlock in order, completed lessons can be reviewed. Progress is saved locally:
 `%APPDATA%\Iqra\progress.json` on Windows, app storage on Android.
+
+## Letter sounds
+
+Each letter has its own short recordings, bundled with the app in
+`composeApp/src/commonMain/composeResources/files/letters/`:
+
+| File | What is said |
+|---|---|
+| `ba.mp3` | the letter's name, "bā'" |
+| `ba_a.mp3`, `ba_i.mp3`, `ba_u.mp3` | the letter with fatḥa / kasra / ḍamma: "ba", "bi", "bu" |
+
+The app uses whatever is there: letter cards get "Its name" / "Its sound" buttons, and lessons
+add listening questions ("Listen. Which letter makes this sound?", "Which did you hear?").
+Missing clips are simply not offered — the app never plays a whole ayah as if it were a letter.
+
+**The recordings are not in the repo yet.** No openly licensed set could be downloaded from the
+build machine. To make them, record four takes (names, then fatḥa, kasra, ḍamma — a pause
+between items) with a teacher or a clear reciter, and split them:
+
+```bash
+python3 tools/letter-audio/make_clips.py script
+```
+
+```bash
+python3 tools/letter-audio/make_clips.py split names names.m4a
+```
+
+See `tools/letter-audio/make_clips.py` for details. Credit the reciter in
+`files/letters/CREDITS.md` and in `AboutScreen.kt`.
 
 ## Run it
 
@@ -88,6 +119,7 @@ composeApp/src/
     data/Letters.kt        28 letters, their shapes, sounds; vowel marks
     data/Quran.kt          loads the Tanzil XML; ayah/word lookup; EveryAyah URLs
     data/Course.kt         units, lessons, unlock rules, opening-letter ayat
+    data/Sound.kt          Sound (streamed ayah or bundled clip); which letter clips exist
     engine/Exercise.kt     exercise types (intro cards, multiple choice, match pairs)
     engine/LessonBuilder.kt  turns a lesson into a shuffled list of exercises
     engine/LessonSession.kt  one lesson in progress: answers, hearts, re-asking mistakes
@@ -103,8 +135,8 @@ composeApp/src/
 
 Roughly in order of value:
 
-1. **Letter sounds audio.** Only 14 letters can be heard (via the Quran's opening letters).
-   Record or license clean recordings of all 28 letters and the vowel syllables.
+1. **Letter sounds audio.** The app is ready for per-letter clips (see *Letter sounds*);
+   the recordings themselves still need to be made or licensed.
 2. **More reading units:** sukūn, shadda, tanwīn, long vowels (ا و ي), then reading whole
    words and short ayat of Juz ʿAmma with word-by-word highlighting.
 3. **Hifz (memorisation) track** for Juz ʿAmma: ayah ordering, fill the missing word,

@@ -16,6 +16,9 @@ expect fun writeProgress(text: String)
 /** Stream an MP3 from [url]; [onDone] runs on the UI thread when it ends, fails or is stopped. */
 expect fun playAudio(url: String, onDone: () -> Unit)
 
+/** Play an MP3 held in memory (a bundled recording); [onDone] as for [playAudio]. */
+expect fun playAudioBytes(bytes: ByteArray, onDone: () -> Unit)
+
 expect fun stopAudio()
 
 @Composable

@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import app.iqra.data.LetterAudio
 import app.iqra.data.QuranText
 import app.iqra.engine.LessonBuilder
 import app.iqra.engine.ProgressStore
@@ -46,6 +47,12 @@ fun App() {
                 QuranText.parse(Res.readBytes("files/quran_uthmani.xml").decodeToString())
             }
         }
+        // Find out once which letter recordings are bundled; lessons only ask about those.
+        val letterAudio by produceState<LetterAudio?>(null) {
+            value = withContext(Dispatchers.Default) {
+                LetterAudio(LetterAudio.allPaths.filter { runCatching { Res.readBytes(it) }.isSuccess }.toSet())
+            }
+        }
         val store = remember { ProgressStore() }
         var screen by remember { mutableStateOf<Screen>(Screen.Home) }
         var attempts by remember { mutableStateOf(0) }
@@ -67,7 +74,8 @@ fun App() {
             Modifier.fillMaxSize().background(palette.background).windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             val q = quran
-            if (q == null) {
+            val audio = letterAudio
+            if (q == null || audio == null) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
                 return@Box
             }
@@ -79,7 +87,7 @@ fun App() {
                 )
                 Screen.About -> AboutScreen(onBack = { screen = Screen.Home })
                 is Screen.Lesson -> {
-                    val exercises = remember(s) { LessonBuilder(q).build(app.iqra.data.Course.lesson(s.id)) }
+                    val exercises = remember(s) { LessonBuilder(q, audio = audio).build(app.iqra.data.Course.lesson(s.id)) }
                     LessonScreen(
                         lessonId = s.id,
                         exercises = exercises,

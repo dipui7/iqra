@@ -54,8 +54,8 @@ android {
         applicationId = "app.iqra"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -72,7 +72,17 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Iqra"
-            packageVersion = "0.1.0"
+            packageVersion = "0.2.0"
+            description = "Learn to read and memorise the Quran"
+            vendor = "Iqra"
+            windows {
+                iconFile.set(project.file("icon.ico"))
+                menuGroup = "Iqra"
+                shortcut = true
+                // Keeps upgrades installing over the previous version instead of side by side.
+                upgradeUuid = "6f1b8f6e-3c55-4d0b-9a57-8a7f0d1c2e41"
+            }
+            linux { iconFile.set(project.file("icon.png")) }
         }
     }
 }

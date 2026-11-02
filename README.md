@@ -14,7 +14,7 @@ and a **Windows desktop app** (Compose Multiplatform).
 | Audience | Adult beginners who don't read Arabic yet; English explanations |
 | First goal | Reading Arabic letters (letters → shapes → short vowels → letters in the Quran) |
 | Quran text | Tanzil Uthmani text v1.1, bundled **unaltered** |
-| Recitation | Mishary Alafasy per-ayah MP3s, **streamed** from EveryAyah at play time, never bundled |
+| Recitation | Mishary Alafasy per-ayah MP3s, **streamed** from EveryAyah at play time, never bundled (kept in a local cache once heard) |
 | Translations | None yet (not needed for letters; their licences differ — check before adding) |
 | Design | Minimal, Apple-like: grouped cards, system-style colours, light + dark mode |
 
@@ -174,6 +174,7 @@ Roughly in order of value:
 5. **Meaning** — word-by-word meanings once a translation with clear terms is chosen.
 6. **Review system** — ~~spaced repetition, practice to earn hearts, daily goal~~ (done);
    next: reminders (notifications).
-7. **Release prep** — app icon, signed release APK / Play Store listing, Windows installer
-   (`./gradlew packageMsi` needs WiX), audio permission from EveryAyah or another source,
-   offline audio caching.
+7. **Release prep** — ~~app icon, offline audio caching~~ (done: `tools/icon/make_icon.py`;
+   heard ayat are cached, up to ~300 MB); next: signed release APK / Play Store listing,
+   Windows installer (`./gradlew packageMsi` — icon and upgrade id are set), audio permission
+   from EveryAyah or another source.

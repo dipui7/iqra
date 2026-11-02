@@ -5,6 +5,7 @@ import javazoom.jl.player.Player
 import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.FilterInputStream
 import java.io.InputStream
 import java.net.URI
 import java.time.LocalDate
@@ -15,10 +16,15 @@ actual fun nowMillis(): Long = System.currentTimeMillis()
 
 actual fun todayEpochDay(): Long = LocalDate.now().toEpochDay()
 
-private val progressFile: File by lazy {
+private val appDir: File by lazy {
     val base = System.getenv("APPDATA")?.let(::File) ?: File(System.getProperty("user.home"), ".config")
-    File(base, "Iqra").apply { mkdirs() }.resolve("progress.json")
+    File(base, "Iqra").apply { mkdirs() }
 }
+
+private val progressFile: File by lazy { appDir.resolve("progress.json") }
+
+/** Recitations already heard, so they play again without internet. */
+private val audioCache: File by lazy { appDir.resolve("audio-cache").apply { mkdirs() } }
 
 actual fun readProgress(): String? = progressFile.takeIf { it.exists() }?.readText()
 
@@ -34,16 +40,70 @@ actual fun writeProgress(text: String) {
 
 private val lock = Any()
 private var player: Player? = null
+private var download: CachingStream? = null
 // Bumped on every play/stop so a download that finishes late doesn't start playing.
 private var generation = 0
 
 actual fun playAudio(url: String, onDone: () -> Unit) = play(url, onDone) {
+    val cached = File(audioCache, cacheName(url))
+    if (cached.exists()) return@play BufferedInputStream(cached.inputStream())
     val connection = URI(url).toURL().openConnection().apply {
-        setRequestProperty("User-Agent", "Iqra/0.1")
+        setRequestProperty("User-Agent", "Iqra/0.2")
         connectTimeout = 10_000
         readTimeout = 15_000
     }
-    BufferedInputStream(connection.getInputStream())
+    val caching = CachingStream(connection.getInputStream(), cached)
+    synchronized(lock) { download = caching }
+    BufferedInputStream(caching)
+}
+
+/**
+ * Passes a download through while saving it; only a download read to the end is kept, so a
+ * recitation stopped half-way is fetched again next time.
+ */
+private class CachingStream(input: InputStream, private val dest: File) : FilterInputStream(input) {
+    private val tmp = File(dest.path + ".part")
+    private val out = tmp.outputStream().buffered()
+    private var complete = false
+
+    /** Set when playback is stopped: the rest is not downloaded (close() then runs on the UI thread). */
+    @Volatile var abandoned = false
+
+    override fun read(): Int = super.read().also { if (it < 0) complete = true else out.write(it) }
+
+    override fun read(b: ByteArray, off: Int, len: Int): Int =
+        super.read(b, off, len).also { if (it < 0) complete = true else out.write(b, off, it) }
+
+    override fun close() {
+        // Playback ended on its own (on the audio thread): save any bytes the decoder didn't need.
+        if (!complete && !abandoned) {
+            runCatching {
+                val buf = ByteArray(8192)
+                while (true) {
+                    val n = `in`.read(buf)
+                    if (n < 0) break
+                    out.write(buf, 0, n)
+                }
+                complete = true
+            }
+        }
+        super.close()
+        out.close()
+        if (complete && tmp.renameTo(dest)) pruneCache() else tmp.delete()
+    }
+}
+
+private fun cacheName(url: String) = url.substringAfter("://").replace(Regex("[^A-Za-z0-9.]"), "_")
+
+/** Keep the cache under ~300 MB by dropping the least recently written files. */
+private fun pruneCache(limit: Long = 300L * 1024 * 1024) {
+    val files = audioCache.listFiles().orEmpty().filter { it.isFile }.sortedBy { it.lastModified() }
+    var total = files.sumOf { it.length() }
+    for (f in files) {
+        if (total <= limit) break
+        total -= f.length()
+        f.delete()
+    }
 }
 
 actual fun playAudioBytes(bytes: ByteArray, onDone: () -> Unit) =
@@ -70,6 +130,8 @@ private fun play(what: String, onDone: () -> Unit, open: () -> InputStream) {
 actual fun stopAudio() {
     synchronized(lock) {
         generation++
+        download?.abandoned = true
+        download = null
         player?.close()
         player = null
     }

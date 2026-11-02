@@ -7,7 +7,11 @@ import android.media.MediaDataSource
 import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import android.os.Handler
+import android.os.Looper
 import java.io.File
+import java.net.URL
+import kotlin.concurrent.thread
 import java.time.LocalDate
 
 /** Set by MainActivity before the UI starts. */
@@ -31,7 +35,57 @@ actual fun writeProgress(text: String) {
 private var player: MediaPlayer? = null
 private var playerDone: (() -> Unit)? = null
 
-actual fun playAudio(url: String, onDone: () -> Unit) = play(onDone) { setDataSource(url) }
+/** Recitations already heard, so they play again without internet. */
+private val audioCache: File get() = File(appContext.cacheDir, "audio").apply { mkdirs() }
+
+private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
+
+// Bumped on every play/stop so a download that finishes late doesn't start playing.
+private var generation = 0
+
+actual fun playAudio(url: String, onDone: () -> Unit) {
+    val cached = File(audioCache, url.substringAfter("://").replace(Regex("[^A-Za-z0-9.]"), "_"))
+    if (cached.exists()) {
+        play(onDone) { setDataSource(cached.path) }
+        return
+    }
+    stopAudio()
+    val gen = ++generation
+    playerDone = onDone
+    thread(isDaemon = true, name = "audio-download") {
+        val ok = runCatching {
+            val tmp = File(cached.path + ".part")
+            val connection = URL(url).openConnection().apply {
+                setRequestProperty("User-Agent", "Iqra/0.2")
+                connectTimeout = 10_000
+                readTimeout = 15_000
+            }
+            connection.getInputStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
+            check(tmp.renameTo(cached))
+            pruneCache()
+        }.isSuccess
+        mainHandler.post {
+            if (gen != generation) return@post
+            if (ok) {
+                playerDone = null // still the same play request: don't report it finished
+                play(onDone) { setDataSource(cached.path) }
+            } else {
+                stopAudio()
+            }
+        }
+    }
+}
+
+/** Keep the cache under ~300 MB by dropping the least recently written files. */
+private fun pruneCache(limit: Long = 300L * 1024 * 1024) {
+    val files = audioCache.listFiles().orEmpty().filter { it.isFile }.sortedBy { it.lastModified() }
+    var total = files.sumOf { it.length() }
+    for (f in files) {
+        if (total <= limit) break
+        total -= f.length()
+        f.delete()
+    }
+}
 
 actual fun playAudioBytes(bytes: ByteArray, onDone: () -> Unit) = play(onDone) {
     setDataSource(object : MediaDataSource() {
@@ -48,6 +102,7 @@ actual fun playAudioBytes(bytes: ByteArray, onDone: () -> Unit) = play(onDone) {
 
 private fun play(onDone: () -> Unit, setSource: MediaPlayer.() -> Unit) {
     stopAudio()
+    generation++
     playerDone = onDone
     player = MediaPlayer().apply {
         setAudioAttributes(
@@ -65,10 +120,12 @@ private fun play(onDone: () -> Unit, setSource: MediaPlayer.() -> Unit) {
 }
 
 actual fun stopAudio() {
+    generation++
     player?.release()
     player = null
-    playerDone?.invoke()
+    val done = playerDone
     playerDone = null
+    done?.invoke()
 }
 
 @Composable

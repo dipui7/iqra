@@ -34,8 +34,8 @@ private val sources = listOf(
     ),
     Source(
         "Recitation — Mishary Rashid Alafasy",
-        "Per-ayah recordings streamed from EveryAyah.com when you tap play. The audio is not bundled with the app " +
-            "and an internet connection is needed to hear it.",
+        "Per-ayah recordings streamed from EveryAyah.com when you tap play. The audio is not bundled with the app; " +
+            "an ayah you have heard is kept on your device so it plays again without internet.",
         "https://everyayah.com",
     ),
     Source(

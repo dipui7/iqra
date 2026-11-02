@@ -28,6 +28,8 @@ class LessonBuilder(
     private val random: Random = Random.Default,
     private val audio: LetterAudio = LetterAudio.none,
 ) {
+    private val hifz = HifzBuilder(quran, random)
+
 
     fun build(lesson: Lesson): List<Exercise> {
         val unit = Course.unitOf(lesson.id)
@@ -43,6 +45,8 @@ class LessonBuilder(
             LessonKind.RuleQuran -> ruleQuran(listOf(unit.rule!!), questions = 10)
             LessonKind.ReadingReview -> readingReview()
             LessonKind.QuranMarks -> ruleQuran(Rules.all, questions = 12)
+            LessonKind.HifzLearn -> hifz.learn(unit.surah!!)
+            LessonKind.HifzRecall -> hifz.recall(unit.surah!!)
         }
     }
 
@@ -83,6 +87,7 @@ class LessonBuilder(
                 val rule = Rules.all.firstOrNull { it.key == key } ?: return null
                 if (random.nextInt(3) == 0) whichIsRead(rule) else readWord(rule)
             }
+            "surah" -> key.toIntOrNull()?.takeIf { it in 1..114 }?.let { hifz.reviewQuestion(it) }
             else -> null
         }
     }

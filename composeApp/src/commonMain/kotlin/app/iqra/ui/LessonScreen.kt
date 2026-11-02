@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -97,14 +98,14 @@ fun LessonScreen(
         LessonSession(
             exercises, store.progress.hearts,
             onMistake = store::loseHeart,
-            onAnswer = { question, right -> question.skill?.let { store.recordAnswer(it, right) } },
+            onAnswer = { skill, right -> skill?.let { store.recordAnswer(it, right) } },
             heartsMatter = !practice,
         )
     }
 
     fun finish(passed: Boolean) {
         stopAudio()
-        val questions = exercises.count { it !is Exercise.LetterIntro && it !is Exercise.RuleIntro }
+        val questions = exercises.count { it !is Exercise.LetterIntro && it !is Exercise.RuleIntro && it !is Exercise.AyahIntro }
         val accuracy = if (questions == 0) 100 else (100 * questions / (questions + session.mistakes))
         val base = if (practice) PRACTICE_XP else LESSON_XP
         val xp = if (passed) base + if (session.mistakes == 0) PERFECT_BONUS_XP else 0 else 0
@@ -133,6 +134,8 @@ fun LessonScreen(
                     is Exercise.RuleIntro -> RuleIntro(exercise)
                     is Exercise.Choice -> ChoiceQuestion(exercise, session)
                     is Exercise.Match -> MatchQuestion(exercise, session)
+                    is Exercise.AyahIntro -> AyahIntro(exercise)
+                    is Exercise.Order -> OrderQuestion(exercise, session)
                 }
             }
         }
@@ -243,6 +246,26 @@ private fun RuleIntro(intro: Exercise.RuleIntro) {
     }
 }
 
+@Composable
+private fun AyahIntro(intro: Exercise.AyahIntro) {
+    Label("AYAH ${intro.ref.aya} OF ${intro.ayahCount} · ${intro.surahName.uppercase()}")
+    Card {
+        Text(
+            intro.text,
+            style = arabicStyle(if (intro.text.length > 60) 30 else 36, lineFactor = 2.0).copy(textDirection = TextDirection.Rtl),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        )
+    }
+    Spacer(Modifier.height(16.dp))
+    AudioButton(Sound.Ayah(intro.ref), "Listen again", autoPlay = true)
+    Text(
+        "Listen, then recite it aloud two or three times — looking, then with your eyes closed — before you continue.",
+        color = palette.secondary,
+        modifier = Modifier.padding(top = 14.dp),
+    )
+}
+
 // --- Questions -------------------------------------------------------------------------
 
 @Composable
@@ -326,6 +349,65 @@ private fun OptionCard(option: Option, i: Int, q: Exercise.Choice, session: Less
         } else {
             Text(option.label, style = MaterialTheme.typography.bodyLarge, color = palette.text, textAlign = TextAlign.Center)
         }
+    }
+}
+
+@Composable
+private fun OrderQuestion(q: Exercise.Order, session: LessonSession) {
+    // Positions into q.items, shown shuffled; the learner taps them in order.
+    val shuffled = remember { q.items.indices.shuffled() }
+    val picked = remember { mutableStateListOf<Int>() }
+    val fb = session.feedback
+    LaunchedEffect(picked.size) {
+        session.orderAnswer = if (picked.size == q.items.size) picked.map { q.items[it] } else null
+    }
+
+    Text(q.prompt, style = MaterialTheme.typography.titleLarge, color = palette.text, modifier = Modifier.padding(top = 12.dp))
+    q.caption?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.secondary, modifier = Modifier.padding(bottom = 8.dp)) }
+    Text(
+        if (fb is Feedback.Wrong) "The right order:" else "Tap the ayat from first to last. Tap a placed one to take it back.",
+        style = MaterialTheme.typography.bodySmall, color = palette.secondary, modifier = Modifier.padding(vertical = 6.dp),
+    )
+
+    val placed: List<Int> = if (fb is Feedback.Wrong) q.items.indices.toList() else picked
+    placed.forEachIndexed { n, i ->
+        OrderTile(
+            number = n + 1, text = q.items[i],
+            state = if (fb == Feedback.Correct) palette.correct else palette.accent,
+            enabled = fb == null,
+        ) { picked.remove(i) }
+    }
+    if (fb == null) {
+        if (picked.isNotEmpty() && picked.size < q.items.size) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp), color = palette.separator)
+        }
+        shuffled.filter { it !in picked }.forEach { i ->
+            OrderTile(number = null, text = q.items[i], state = palette.separator, enabled = true) { picked.add(i) }
+        }
+    }
+}
+
+@Composable
+private fun OrderTile(number: Int?, text: String, state: Color, enabled: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = 10.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(palette.card)
+            .border(BorderStroke(2.dp, state), RoundedCornerShape(16.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(28.dp).clip(CircleShape).background(if (number != null) state else palette.background), contentAlignment = Alignment.Center) {
+            if (number != null) Text("$number", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text,
+            style = arabicStyle(if (text.length > 50) 22 else 26).copy(textDirection = TextDirection.Rtl),
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -423,7 +505,7 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
                         color = if (good) palette.correct else palette.wrong,
                     )
                 }
-                if (fb is Feedback.Wrong) {
+                if (fb is Feedback.Wrong && fb.answer != null) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                         Text("Answer: ", color = palette.text)
                         if (fb.answer.arabic) Text(fb.answer.label, style = arabicStyle(28))
@@ -443,6 +525,7 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
             )
             exercise is Exercise.Choice -> PrimaryButton("Check", enabled = session.selected != null, onClick = session::check)
             exercise is Exercise.Match -> PrimaryButton("Match all pairs", enabled = false, onClick = {})
+            exercise is Exercise.Order -> PrimaryButton("Check", enabled = session.orderAnswer != null, onClick = session::check)
             else -> PrimaryButton("Continue", onClick = { session.markSolved(showFeedback = false) })
         }
     }

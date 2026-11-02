@@ -1,5 +1,6 @@
 package app.iqra.engine
 
+import app.iqra.data.AyahRef
 import app.iqra.data.Letter
 import app.iqra.data.Sound
 
@@ -38,6 +39,15 @@ sealed interface Exercise {
         /** What this question practises, e.g. "letter:ba" or "rule:shadda" (see [Skills]). */
         val skill: String? = null,
     ) : Exercise
+
+    /** One ayah to listen to and read, while memorising a surah. */
+    data class AyahIntro(val ref: AyahRef, val text: String, val surahName: String, val ayahCount: Int) : Exercise
+
+    /**
+     * Put Arabic items (ayat) in order by tapping them. [items] is the right order; items with the
+     * same text are interchangeable.
+     */
+    data class Order(val prompt: String, val items: List<String>, val caption: String? = null, val skill: String? = null) : Exercise
 
     /** Tap an Arabic item, then its matching Latin item, until all pairs are matched. */
     data class Match(val prompt: String, val pairs: List<Pair<String, String>>) : Exercise

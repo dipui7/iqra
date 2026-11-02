@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import app.iqra.data.Course
 import app.iqra.data.CourseUnit
+import app.iqra.data.Track
 import app.iqra.engine.MAX_HEARTS
 import app.iqra.engine.Progress
 import app.iqra.nowMillis
@@ -66,6 +67,7 @@ fun HomeScreen(
     onSettings: () -> Unit = {},
 ) {
     var noHearts by remember { mutableStateOf(false) }
+    var track by remember { mutableStateOf(Track.Reading) }
     val start = { id: String -> if (progress.hearts > 0) onStart(id) else noHearts = true }
     val today = todayEpochDay()
 
@@ -76,7 +78,16 @@ fun HomeScreen(
     ) {
         item { Header(progress, onAbout, onSettings) }
         if (progress.skills.isNotEmpty()) item { PracticeCard(progress.dueCount(today), progress.hearts < MAX_HEARTS, onPractice) }
-        items(Course.units, key = { it.id }) { unit -> UnitCard(unit, progress, start) }
+        item { TrackSwitch(track) { track = it } }
+        if (track == Track.Hifz) {
+            item {
+                Text(
+                    "Memorise the short surahs of Juz ʿAmma, one ayah at a time. Every surah is open — start with one you don't know yet.",
+                    color = palette.secondary, style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+        items(if (track == Track.Reading) Course.units else Course.hifzUnits, key = { it.id }) { unit -> UnitCard(unit, progress, start) }
         item {
             Text(
                 "Quran text: Tanzil Project (tanzil.net) · Recitation: Mishary Alafasy via EveryAyah",
@@ -130,6 +141,23 @@ private fun Header(progress: Progress, onAbout: () -> Unit, onSettings: () -> Un
         }
         Spacer(Modifier.height(10.dp))
         DailyGoal(progress.xpOn(todayEpochDay()), progress.dailyGoal)
+    }
+}
+
+@Composable
+private fun TrackSwitch(track: Track, onChange: (Track) -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(palette.separator).padding(3.dp)) {
+        listOf(Track.Reading to "Learn to read", Track.Hifz to "Memorise").forEach { (t, label) ->
+            val selected = t == track
+            Box(
+                Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
+                    .background(if (selected) palette.card else Color.Transparent)
+                    .clickable { onChange(t) }.padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, style = MaterialTheme.typography.bodyMedium, color = if (selected) palette.text else palette.secondary)
+            }
+        }
     }
 }
 
@@ -208,7 +236,10 @@ private fun UnitCard(unit: CourseUnit, progress: Progress, onStart: (String) -> 
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)) {
         Row(Modifier.padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("UNIT ${unit.id.drop(1)}", style = MaterialTheme.typography.labelSmall, color = palette.secondary)
+                Text(
+                    if (unit.surah != null) "SURAH ${unit.surah}" else "UNIT ${unit.id.drop(1)}",
+                    style = MaterialTheme.typography.labelSmall, color = palette.secondary,
+                )
                 Text(unit.title, style = MaterialTheme.typography.titleLarge, color = palette.text)
                 Text(unit.subtitle, style = MaterialTheme.typography.bodyMedium, color = palette.secondary)
             }

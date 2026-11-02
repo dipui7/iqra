@@ -70,6 +70,11 @@ class ScreenshotTest {
         lessonShot("rule-read", sukun.first { it is Exercise.Choice && it.prompt.startsWith("How") })
         lessonShot("rule-which", sukun.first { it is Exercise.Choice && it.prompt.startsWith("Which one") })
         lessonShot("rule-quran", b.build(Course.lesson("u11-quran")).first { it is Exercise.Choice && it.prompt.startsWith("Which word") })
+        val hifz = b.build(Course.lesson("h112-learn"))
+        lessonShot("hifz-ayah", hifz.first())
+        lessonShot("hifz-next-ayah", hifz.first { it is Exercise.Choice && it.prompt == "What comes next?" })
+        lessonShot("hifz-order", hifz.first { it is Exercise.Order })
+        lessonShot("hifz-next-word", b.build(Course.lesson("h1-recall")).first { it is Exercise.Choice && it.prompt == "Which word comes next?" })
         shot("result") { ResultScreen(LessonResult("Meet the letters", true, 15, 92), 3) {} }
     }
 }

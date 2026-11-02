@@ -12,4 +12,5 @@ object Skills {
     fun letter(l: Letter) = "letter:${l.key}"
     fun vowel(h: Haraka) = "vowel:${h.sound}"
     fun rule(r: Rule) = "rule:${r.key}"
+    fun surah(number: Int) = "surah:$number"
 }

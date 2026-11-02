@@ -22,7 +22,13 @@ enum class LessonKind {
     ReadingReview,
     /** Spot every rule in real Quran words. */
     QuranMarks,
+    /** Memorise a surah: hear and read each ayah, then what-comes-next and ordering. */
+    HifzLearn,
+    /** Recall a surah from memory: next ayah, next word, listening, ordering. */
+    HifzRecall,
 }
+
+enum class Track { Reading, Hifz }
 
 data class Lesson(val id: String, val title: String, val kind: LessonKind)
 
@@ -36,6 +42,9 @@ data class CourseUnit(
     val rule: Rule? = null,
     /** Arabic shown on the unit's card: its letters, or an example of its marks. */
     val badge: String = letters.joinToString(" ") { it.char },
+    val track: Track = Track.Reading,
+    /** The surah memorised in this unit (memorisation track). */
+    val surah: Int? = null,
 )
 
 /** An ayah that consists only of opening letters, with the letters it is made of. */
@@ -125,9 +134,28 @@ object Course {
     fun rulesUpTo(unit: CourseUnit): List<Rule> =
         units.take(units.indexOf(unit) + 1).mapNotNull { it.rule }
 
-    val allLessons: List<Lesson> = units.flatMap { it.lessons }
+    /** The memorisation track: one unit per short surah. */
+    val hifzUnits: List<CourseUnit> = Hifz.surahs.map { s ->
+        CourseUnit(
+            id = "h${s.number}",
+            title = s.name,
+            subtitle = "${s.meaning} · ${Hifz.ayahCount.getValue(s.number)} ayat",
+            letters = emptyList(),
+            badge = arabicDigits(s.number),
+            track = Track.Hifz,
+            surah = s.number,
+            lessons = listOf(
+                Lesson("h${s.number}-learn", "Listen and learn", LessonKind.HifzLearn),
+                Lesson("h${s.number}-recall", "Recite from memory", LessonKind.HifzRecall),
+            ),
+        )
+    }
 
-    fun unitOf(lessonId: String): CourseUnit = units.first { u -> u.lessons.any { it.id == lessonId } }
+    private val allUnits = units + hifzUnits
+
+    val allLessons: List<Lesson> = allUnits.flatMap { it.lessons }
+
+    fun unitOf(lessonId: String): CourseUnit = allUnits.first { u -> u.lessons.any { it.id == lessonId } }
 
     fun lesson(lessonId: String): Lesson = allLessons.first { it.id == lessonId }
 
@@ -135,9 +163,14 @@ object Course {
     fun lettersUpTo(unit: CourseUnit): List<Letter> =
         units.take(units.indexOf(unit) + 1).flatMap { it.letters }
 
-    /** A lesson unlocks once every lesson before it has been completed. */
-    fun isUnlocked(lessonId: String, completed: Set<String>): Boolean =
-        allLessons.takeWhile { it.id != lessonId }.all { it.id in completed }
+    /**
+     * Reading lessons unlock once every reading lesson before them is completed. Memorisation is
+     * personal (many learners already know some surahs), so every surah is open.
+     */
+    fun isUnlocked(lessonId: String, completed: Set<String>): Boolean {
+        if (unitOf(lessonId).track == Track.Hifz) return true
+        return units.flatMap { it.lessons }.takeWhile { it.id != lessonId }.all { it.id in completed }
+    }
 
     val openings: List<Opening> = with(Letters) {
         listOf(

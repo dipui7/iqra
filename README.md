@@ -59,6 +59,17 @@ All of this is also shown in the app (ⓘ on the home screen).
    lesson text, not Quranic text.
 14. **Reading words** — mixed practice words, every mark in real Quran words, final review.
 
+**Memorise** (second tab on the home screen) — 21 short surahs: Al-Fātiḥah and most of the
+end of Juz ʿAmma, in the usual memorisation order. Every surah is open from the start, with two
+lessons:
+- *Listen and learn* — each ayah is played and shown, with "recite it aloud" guidance; after
+  each new ayah, "what comes next?" links it to the one before; then put the ayat in order.
+- *Recite from memory* — what comes next, which word comes next (the start of an ayah, cut at
+  one of its own spaces), listen and pick the ayah, put the ayat in order.
+
+Questions only ever have one right answer: an ayah that occurs twice in its surah (Al-Kāfirūn 3
+and 5) is never used as a prompt, and identical ayat may be ordered either way round.
+
 Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, daily XP goal (10/20/30/50,
 set in Settings), 5 hearts (lose one per mistake, refill one every 20 minutes), wrong answers
 come back at the end of the lesson, lessons unlock in order, completed lessons can be reviewed.
@@ -133,9 +144,11 @@ composeApp/src/
     data/Quran.kt          loads the Tanzil XML; ayah/word lookup; EveryAyah URLs
     data/Course.kt         units, lessons, unlock rules, opening-letter ayat
     data/Reading.kt        reading rules (sukūn, shadda, tanwīn, long vowels), practice syllables
+    data/Hifz.kt           the surahs of the memorisation track
     data/Sound.kt          Sound (streamed ayah or bundled clip); which letter clips exist
     engine/Exercise.kt     exercise types (intro cards, multiple choice, match pairs)
     engine/LessonBuilder.kt  turns a lesson into a shuffled list of exercises
+    engine/HifzBuilder.kt  memorisation exercises (next ayah, next word, ordering)
     engine/LessonSession.kt  one lesson in progress: answers, hearts, re-asking mistakes
     engine/Progress.kt     XP, streak, hearts, daily goal, review schedule, saving
     engine/Skills.kt       names of what questions practise (letter:ba, rule:shadda …)
@@ -154,8 +167,9 @@ Roughly in order of value:
    the recordings themselves still need to be made or licensed.
 2. **More reading:** ~~sukūn, shadda, tanwīn, long vowels~~ (done); next: hamza forms, the
    silent letters of the Uthmani script, reading short ayat with word-by-word highlighting.
-3. **Hifz (memorisation) track** for Juz ʿAmma: ayah ordering, fill the missing word,
-   listen-and-continue, recite-along.
+3. **Hifz (memorisation) track** — ~~ordering, next word, listen-and-continue~~ (done for 21
+   surahs); next: the rest of Juz ʿAmma (longer surahs split into parts), recite-along with
+   speech recognition, a revision schedule per memorised surah.
 4. **Tajweed basics** (qalqala, ghunna, madd) with colour-coded text — Tanzil offers tajweed data.
 5. **Meaning** — word-by-word meanings once a translation with clear terms is chosen.
 6. **Review system** — ~~spaced repetition, practice to earn hearts, daily goal~~ (done);

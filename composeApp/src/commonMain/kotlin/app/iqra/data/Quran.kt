@@ -26,6 +26,10 @@ class QuranText private constructor(
 
     fun suraName(sura: Int): String = suraNames[sura] ?: sura.toString()
 
+    /** Every ayah of a surah, in order. */
+    fun surah(sura: Int): List<Pair<AyahRef, String>> =
+        generateSequence(1) { it + 1 }.map { AyahRef(sura, it) }.takeWhile { it in ayat }.map { it to ayat.getValue(it) }.toList()
+
     fun words(sura: Int): List<QuranWord> =
         ayat.filterKeys { it.sura == sura }.flatMap { (ref, text) ->
             // Skip stand-alone pause marks and the rubʿ symbol, which are not words.

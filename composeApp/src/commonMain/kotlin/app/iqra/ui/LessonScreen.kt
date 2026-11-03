@@ -399,7 +399,7 @@ private fun OrderTile(number: Int?, text: String, state: Color, enabled: Boolean
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(28.dp).clip(CircleShape).background(if (number != null) state else palette.background), contentAlignment = Alignment.Center) {
-            if (number != null) Text("$number", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+            if (number != null) Text("$number", color = palette.onAccent, style = MaterialTheme.typography.bodyMedium)
         }
         Spacer(Modifier.width(10.dp))
         Text(
@@ -603,7 +603,7 @@ fun AudioButton(sound: Sound, label: String, autoPlay: Boolean = false) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(32.dp).clip(CircleShape).background(palette.accent), contentAlignment = Alignment.Center) {
-            Icon(if (playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Icon(if (playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, null, tint = palette.onAccent, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(10.dp))
         Text(if (playing) "Playing…" else label, color = palette.accent, style = MaterialTheme.typography.bodyMedium)

@@ -11,8 +11,8 @@ Needs Pillow (pip install pillow). Edit the shapes below and re-run to change th
 import os
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-GREEN = "#0E8A66"
-GREEN_DARK = "#0A6F52"
+GREEN = "#2E8B62"
+GREEN_DARK = "#236E4D"
 # Android masks adaptive icons to the middle of the canvas; standalone icons can fill more of it.
 STANDALONE_SCALE = 1.35
 CENTER = (54, 55)

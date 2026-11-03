@@ -16,7 +16,7 @@ and a **Windows desktop app** (Compose Multiplatform).
 | Quran text | Tanzil Uthmani text v1.1, bundled **unaltered** |
 | Recitation | Mishary Alafasy per-ayah MP3s, **streamed** from EveryAyah at play time, never bundled (kept in a local cache once heard) |
 | Translations | None yet (not needed for letters; their licences differ — check before adding) |
-| Design | Minimal, Apple-like: grouped cards, system-style colours, light + dark mode |
+| Design | Minimal, Apple-like grouped cards; warm off-white and light green (dark mode: green-charcoal) |
 
 ## Content sources and licences
 

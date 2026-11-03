@@ -273,7 +273,7 @@ private fun UnitCard(unit: CourseUnit, progress: Progress, onStart: (String) -> 
 @Composable
 private fun LessonRow(title: String, completed: Boolean, unlocked: Boolean, onClick: () -> Unit) {
     val (icon, bg, fg) = when {
-        completed -> Triple(Icons.Rounded.Check, palette.accent, Color.White)
+        completed -> Triple(Icons.Rounded.Check, palette.accent, palette.onAccent)
         unlocked -> Triple(Icons.Rounded.PlayArrow, palette.accentSoft, palette.accent)
         else -> Triple(Icons.Rounded.Lock, palette.separator, palette.secondary)
     }

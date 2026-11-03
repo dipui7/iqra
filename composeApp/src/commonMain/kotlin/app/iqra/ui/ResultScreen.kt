@@ -33,7 +33,7 @@ fun ResultScreen(result: LessonResult, streak: Int, onContinue: () -> Unit) {
         Spacer(Modifier.weight(1f))
         val tint = if (result.passed) palette.accent else palette.heart
         Box(Modifier.size(96.dp).clip(CircleShape).background(tint), contentAlignment = Alignment.Center) {
-            Icon(if (result.passed) Icons.Rounded.Check else Icons.Rounded.HeartBroken, null, tint = Color.White, modifier = Modifier.size(56.dp))
+            Icon(if (result.passed) Icons.Rounded.Check else Icons.Rounded.HeartBroken, null, tint = palette.onAccent, modifier = Modifier.size(56.dp))
         }
         Spacer(Modifier.height(24.dp))
         Text(

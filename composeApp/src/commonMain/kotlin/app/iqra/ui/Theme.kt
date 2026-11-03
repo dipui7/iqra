@@ -17,7 +17,7 @@ import app.iqra.resources.Res
 import app.iqra.resources.amiri_quran
 import org.jetbrains.compose.resources.Font
 
-/** Colours beyond Material's scheme, modelled on Apple's system palette. */
+/** Colours beyond Material's scheme: warm off-white and light green, in light and dark versions. */
 @Immutable
 data class Palette(
     val background: Color,
@@ -27,6 +27,8 @@ data class Palette(
     val separator: Color,
     val accent: Color,
     val accentSoft: Color,
+    /** Text and icons drawn on [accent] (and on the other strong colours). */
+    val onAccent: Color,
     val correct: Color,
     val correctSoft: Color,
     val wrong: Color,
@@ -35,36 +37,40 @@ data class Palette(
     val heart: Color,
 )
 
+// Warm off-white paper with light green; the deeper green keeps buttons and links readable.
 private val Light = Palette(
-    background = Color(0xFFF2F2F7),
-    card = Color.White,
-    text = Color(0xFF1C1C1E),
-    secondary = Color(0xFF8E8E93),
-    separator = Color(0xFFE5E5EA),
-    accent = Color(0xFF0E8A66),
-    accentSoft = Color(0xFFE3F4EE),
-    correct = Color(0xFF248A3D),
-    correctSoft = Color(0xFFE6F6EA),
-    wrong = Color(0xFFD70015),
-    wrongSoft = Color(0xFFFDE8EA),
-    streak = Color(0xFFFF9500),
-    heart = Color(0xFFFF2D55),
+    background = Color(0xFFF7F5EE),
+    card = Color(0xFFFFFEFA),
+    text = Color(0xFF1F2A24),
+    secondary = Color(0xFF6B7570),
+    separator = Color(0xFFE7E5DA),
+    accent = Color(0xFF2E8B62),
+    accentSoft = Color(0xFFE4F2E7),
+    onAccent = Color.White,
+    correct = Color(0xFF2E8B57),
+    correctSoft = Color(0xFFE3F3E6),
+    wrong = Color(0xFFC8323C),
+    wrongSoft = Color(0xFFFBE9E7),
+    streak = Color(0xFFE8891A),
+    heart = Color(0xFFE0405E),
 )
 
+// Deep green-charcoal, with the same light green as the accent.
 private val Dark = Palette(
-    background = Color(0xFF000000),
-    card = Color(0xFF1C1C1E),
-    text = Color.White,
-    secondary = Color(0xFF8E8E93),
-    separator = Color(0xFF38383A),
-    accent = Color(0xFF30D1A0),
-    accentSoft = Color(0xFF12352B),
-    correct = Color(0xFF30D158),
-    correctSoft = Color(0xFF12301A),
-    wrong = Color(0xFFFF453A),
-    wrongSoft = Color(0xFF3A1513),
-    streak = Color(0xFFFF9F0A),
-    heart = Color(0xFFFF375F),
+    background = Color(0xFF111613),
+    card = Color(0xFF1B221E),
+    text = Color(0xFFEDEFE9),
+    secondary = Color(0xFF8E9792),
+    separator = Color(0xFF2E3833),
+    accent = Color(0xFF6FD3A0),
+    accentSoft = Color(0xFF1E3428),
+    onAccent = Color(0xFF111613),
+    correct = Color(0xFF5FD37E),
+    correctSoft = Color(0xFF16301F),
+    wrong = Color(0xFFFF6B5E),
+    wrongSoft = Color(0xFF3A1A17),
+    streak = Color(0xFFFFA53A),
+    heart = Color(0xFFFF5C7A),
 )
 
 val LocalPalette = staticCompositionLocalOf { Light }
@@ -87,9 +93,9 @@ fun IqraTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     val p = if (dark) Dark else Light
     val scheme = if (dark) {
-        darkColorScheme(primary = p.accent, background = p.background, surface = p.card, onSurface = p.text)
+        darkColorScheme(primary = p.accent, onPrimary = p.onAccent, background = p.background, surface = p.card, onSurface = p.text)
     } else {
-        lightColorScheme(primary = p.accent, background = p.background, surface = p.card, onSurface = p.text)
+        lightColorScheme(primary = p.accent, onPrimary = p.onAccent, background = p.background, surface = p.card, onSurface = p.text)
     }
     val base = Typography()
     val typography = Typography(

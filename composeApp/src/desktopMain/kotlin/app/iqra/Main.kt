@@ -11,7 +11,7 @@ import org.jetbrains.compose.resources.painterResource
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "Iqra",
+        title = "AlifUp",
         icon = painterResource(Res.drawable.app_icon),
         state = rememberWindowState(width = 440.dp, height = 860.dp),
     ) {

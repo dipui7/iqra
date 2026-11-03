@@ -40,7 +40,7 @@ actual fun decodeMp3(bytes: ByteArray): Pcm? = runCatching {
 
 actual fun fetchAudioBytes(url: String): ByteArray? = runCatching {
     cachedAudio(url)?.readBytes() ?: URI(url).toURL().openConnection().apply {
-        setRequestProperty("User-Agent", "Iqra/0.2")
+        setRequestProperty("User-Agent", "AlifUp/0.2")
         connectTimeout = 10_000
         readTimeout = 15_000
     }.getInputStream().use { it.readBytes() }.also { saveToAudioCache(url, it) }

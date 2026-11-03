@@ -90,7 +90,7 @@ actual fun fetchAudioBytes(url: String): ByteArray? = runCatching {
     val cached = File(dir, url.substringAfter("://").replace(Regex("[^A-Za-z0-9.]"), "_"))
     if (cached.exists()) return@runCatching cached.readBytes()
     val bytes = URL(url).openConnection().apply {
-        setRequestProperty("User-Agent", "Iqra/0.2")
+        setRequestProperty("User-Agent", "AlifUp/0.2")
         connectTimeout = 10_000
         readTimeout = 15_000
     }.getInputStream().use { it.readBytes() }

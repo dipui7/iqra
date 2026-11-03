@@ -3,12 +3,7 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFFFFF" android:pathData="M52.5,41 C45,36.5 36,35.5 29,37.5 L29,70 C36,68 45,69 52.5,73.5 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M55.5,41 C63,36.5 72,35.5 79,37.5 L79,70 C72,68 63,69 55.5,73.5 Z" />
-    <path android:strokeColor="#236E4D" android:strokeWidth="1.6" android:strokeLineCap="round" android:pathData="M34,45 C39,44 44,44.5 48,46.5" />
-    <path android:strokeColor="#236E4D" android:strokeWidth="1.6" android:strokeLineCap="round" android:pathData="M34,51 C39,50 44,50.5 48,52.5" />
-    <path android:strokeColor="#236E4D" android:strokeWidth="1.6" android:strokeLineCap="round" android:pathData="M34,57 C39,56 44,56.5 48,58.5" />
-    <path android:strokeColor="#236E4D" android:strokeWidth="1.6" android:strokeLineCap="round" android:pathData="M74,45 C69,44 64,44.5 60,46.5" />
-    <path android:strokeColor="#236E4D" android:strokeWidth="1.6" android:strokeLineCap="round" android:pathData="M74,51 C69,50 64,50.5 60,52.5" />
-    <path android:strokeColor="#236E4D" android:strokeWidth="1.6" android:strokeLineCap="round" android:pathData="M74,57 C69,56 64,56.5 60,58.5" />
+    <path android:fillColor="#B3DCC3" android:pathData="M27,84 L27,76.6 C27,75.72 27.72,75 28.6,75 L45,75 L45,67.6 C45,66.72 45.72,66 46.6,66 L63,66 L63,58.6 C63,57.72 63.72,57 64.6,57 L79.4,57 C80.28,57 81,57.72 81,58.6 L81,82.4 C81,83.28 80.28,84 79.4,84 Z" />
+    <path android:fillColor="#2F6B4C" android:pathData="M69.88,23.25 C71.2,21.63 72.05,21.6 72.42,23.15 L74.59,35.29 C76.97,46.23 76.69,53.16 73.74,56.1 C73.3,56.5 72.96,56.6 72.71,56.4 C72.46,56.24 72.33,55.96 72.33,55.56 C72.46,52.78 72.08,49.66 71.2,46.19 C71.2,46.06 70.54,42.92 69.22,36.78 L67.15,27.81 C67.03,27.15 67.15,26.59 67.53,26.13 Z" />
+    <path android:fillColor="#E39A3B" android:pathData="M50,30 C50.72,34.2 51.8,35.28 56,36 C51.8,36.72 50.72,37.8 50,42 C49.28,37.8 48.2,36.72 44,36 C48.2,35.28 49.28,34.2 50,30 Z" />
 </vector>

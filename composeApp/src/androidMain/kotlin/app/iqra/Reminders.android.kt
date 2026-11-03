@@ -78,7 +78,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val notification = Notification.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(if (streak > 0) "Keep your $streak-day streak going" else "Time for a short lesson")
-            .setContentText("A few minutes of Iqra today.")
+            .setContentText("A few minutes of AlifUp today.")
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()

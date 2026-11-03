@@ -35,7 +35,7 @@ private val sources = listOf(
     Source(
         "Translation — Saheeh International",
         "English translation by Saheeh International, from Tanzil.net. Tanzil's translations are for " +
-            "non-commercial use only; Iqra is free, with no ads or paid features.",
+            "non-commercial use only; AlifUp is free, with no ads or paid features.",
         "https://tanzil.net/trans/",
     ),
     Source(

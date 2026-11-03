@@ -1,10 +1,22 @@
-# Iqra — learn to read the Quran
+# AlifUp — learn to read the Quran
 
 A Duolingo-style app that teaches adult beginners to read Arabic letters, using
 real Quran text and recitation. One Kotlin codebase builds both an **Android app**
 and a **Windows desktop app** (Compose Multiplatform).
 
-"Iqra" (اقرأ, *read*) is a working name.
+## Brand
+
+- **Name: AlifUp** — start at Alif (ا), the first letter, and level up: letters, reading
+  rules, memorising, the whole Quran. Chosen on 2026-11-04 because "Iqra" (the working name)
+  is used by at least eight Quran apps, one of them with the Android package ID `app.iqra`.
+  A quick store search found no app called AlifUp; a proper trademark search is still to do.
+- **Package ID:** `app.alifup` (Android). The Kotlin code keeps the package `app.iqra`, which
+  users never see.
+- **Logo:** an Alif standing on three rising steps, with a small amber spark. The Alif is the
+  real glyph from the Amiri Quran font (SIL OFL). Drawn by `tools/icon/make_icon.py`, which
+  writes the Android adaptive icon, the in-app icon and `composeApp/icon.png` / `icon.ico`.
+- **Colours:** warm ivory `#F8F4EC`, cream cards `#FFFDF8`, light sage `#B3DCC3` for filled
+  shapes, deeper sage `#4A8F69` for text and icons, amber `#E39A3B` for streaks and coins.
 
 ## Decisions (made on 2026-11-03)
 
@@ -35,7 +47,7 @@ and a **Windows desktop app** (Compose Multiplatform).
   (`licenses/AmiriQuran-OFL.txt`).
 - **Translation — Saheeh International**, from [Tanzil](https://tanzil.net/trans/)
   (`files/translation_en_sahih.txt`, verbatim with Tanzil's header). Tanzil's terms: non-commercial
-  use only. Fine while Iqra is free with no ads or paid features; anything else needs the
+  use only. Fine while AlifUp is free with no ads or paid features; anything else needs the
   publisher's permission.
 - **Tajweed colours — [cpfair/quran-tajweed](https://github.com/cpfair/quran-tajweed)**, CC BY 4.0
   (`files/tajweed.txt`). Its positions refer to a 2017 copy of the Tanzil text, so
@@ -109,7 +121,8 @@ Each of these has a Leitner-style schedule: a right answer moves it up a box and
 next review out (1, 2, 4, 8, 16 days), a wrong one sends it back to today. The *Practice* card
 on the home screen builds a session from what is due, weakest first. Practice costs no hearts
 and gives one back, so it is also the way to keep going when hearts run out. Progress is saved locally:
-`%APPDATA%\Iqra\progress.json` on Windows, app storage on Android.
+`%APPDATA%\AlifUp\progress.json` on Windows (copied over once from the old `%APPDATA%\Iqra`),
+app storage on Android.
 
 **Exams and coins.** Every unit ends with a **unit check** (5 questions, one of them voice),
 and each stage ends with a **stage exam** instead (10 questions, three of them voice): after the

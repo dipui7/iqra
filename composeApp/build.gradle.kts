@@ -51,7 +51,7 @@ android {
     namespace = "app.iqra"
     compileSdk = 35
     defaultConfig {
-        applicationId = "app.iqra"
+        applicationId = "app.alifup"
         minSdk = 26
         targetSdk = 35
         versionCode = 2
@@ -71,7 +71,7 @@ compose.desktop {
         mainClass = "app.iqra.MainKt"
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
-            packageName = "Iqra"
+            packageName = "AlifUp"
             packageVersion = "0.2.0"
             description = "Learn to read and memorise the Quran"
             vendor = "Iqra"
@@ -80,7 +80,7 @@ compose.desktop {
                 menuGroup = "Iqra"
                 shortcut = true
                 // Keeps upgrades installing over the previous version instead of side by side.
-                upgradeUuid = "6f1b8f6e-3c55-4d0b-9a57-8a7f0d1c2e41"
+                upgradeUuid = "042d94df-165c-4b60-8b29-7decafa8f176"
             }
             linux { iconFile.set(project.file("icon.png")) }
         }

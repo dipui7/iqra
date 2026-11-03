@@ -148,7 +148,7 @@ private fun Header(progress: Progress, onAbout: () -> Unit, onSettings: () -> Un
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Iqra", style = MaterialTheme.typography.displaySmall, color = palette.text)
+                Text("AlifUp", style = MaterialTheme.typography.displaySmall, color = palette.text)
                 Text("Learn to read the Quran, letter by letter", color = palette.secondary)
             }
             IconButton(onClick = onBadges) { Icon(Icons.Rounded.EmojiEvents, "Badges", tint = palette.streak) }

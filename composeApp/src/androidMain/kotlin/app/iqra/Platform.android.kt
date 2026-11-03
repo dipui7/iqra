@@ -56,7 +56,7 @@ actual fun playAudio(url: String, onDone: () -> Unit) {
         val ok = runCatching {
             val tmp = File(cached.path + ".part")
             val connection = URL(url).openConnection().apply {
-                setRequestProperty("User-Agent", "Iqra/0.2")
+                setRequestProperty("User-Agent", "AlifUp/0.2")
                 connectTimeout = 10_000
                 readTimeout = 15_000
             }

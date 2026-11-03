@@ -78,7 +78,7 @@ kept_n = sum(len(x['annotations']) for x in out)
 print(f'  kept: {kept_n} ({100*kept_n/total:.2f}%)')
 if out_path:
     header = [
-        'Tajweed marks for the Tanzil Uthmani text bundled with Iqra.',
+        'Tajweed marks for the Tanzil Uthmani text bundled with AlifUp.',
         'Source: github.com/cpfair/quran-tajweed, licensed CC BY 4.0 (creativecommons.org/licenses/by/4.0/).',
         'Changed: positions moved from the 2017 Tanzil text to the current one by',
         'tools/tajweed/map_tajweed.py; marks whose letters changed were dropped.',

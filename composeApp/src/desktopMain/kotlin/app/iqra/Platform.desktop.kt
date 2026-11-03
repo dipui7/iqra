@@ -18,7 +18,11 @@ actual fun todayEpochDay(): Long = LocalDate.now().toEpochDay()
 
 private val appDir: File by lazy {
     val base = System.getenv("APPDATA")?.let(::File) ?: File(System.getProperty("user.home"), ".config")
-    File(base, "Iqra").apply { mkdirs() }
+    val dir = File(base, "AlifUp")
+    // The app was called Iqra before: bring progress and cached recitations across once.
+    val old = File(base, "Iqra")
+    if (!dir.exists() && old.isDirectory) old.copyRecursively(dir)
+    dir.apply { mkdirs() }
 }
 
 private val progressFile: File by lazy { appDir.resolve("progress.json") }
@@ -48,7 +52,7 @@ actual fun playAudio(url: String, onDone: () -> Unit) = play(url, onDone) {
     val cached = File(audioCache, cacheName(url))
     if (cached.exists()) return@play BufferedInputStream(cached.inputStream())
     val connection = URI(url).toURL().openConnection().apply {
-        setRequestProperty("User-Agent", "Iqra/0.2")
+        setRequestProperty("User-Agent", "AlifUp/0.2")
         connectTimeout = 10_000
         readTimeout = 15_000
     }

@@ -81,7 +81,7 @@ fun SupportScreen(onBack: () -> Unit) {
             Text("Help others", style = MaterialTheme.typography.displaySmall, color = palette.text)
         }
         Text(
-            "Iqra is free, with no subscription. If you'd like to give, these organisations help people in " +
+            "AlifUp is free, with no subscription. If you'd like to give, these organisations help people in " +
                 "Gaza, Sudan and the Democratic Republic of the Congo. Each link opens the organisation's own website.",
             color = palette.secondary, modifier = Modifier.padding(top = 8.dp),
         )
@@ -104,7 +104,7 @@ fun SupportScreen(onBack: () -> Unit) {
             }
         }
         Text(
-            "Iqra is not connected to these organisations and receives nothing from them. " +
+            "AlifUp is not connected to these organisations and receives nothing from them. " +
                 "Please check an organisation yourself before giving.",
             style = MaterialTheme.typography.bodySmall, color = palette.secondary,
             modifier = Modifier.padding(top = 16.dp, bottom = 24.dp),

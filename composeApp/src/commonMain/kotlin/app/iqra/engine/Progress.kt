@@ -20,7 +20,7 @@ val READER_TEXT_SIZES = 22..48
  * While the app is in development hearts never run out. Set to false before release, so
  * learners have [MAX_HEARTS] hearts again.
  */
-const val DEV_UNLIMITED_HEARTS = true
+const val DEV_UNLIMITED_HEARTS = false
 
 /** Coins needed to unlock unlimited hearts (a unit check earns 1, a stage exam 3; see [Exams]). */
 const val UNLIMITED_HEARTS_PRICE = 5

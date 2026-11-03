@@ -93,7 +93,7 @@ object Exams {
 }
 
 /** While the app is in development every lesson is open. Set to false to unlock in order again. */
-const val UNLOCK_ALL = true
+const val UNLOCK_ALL = false
 
 object Course {
     private fun letterUnit(n: Int, title: String, vararg letters: Letter) = CourseUnit(

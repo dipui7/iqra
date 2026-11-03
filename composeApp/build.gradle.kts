@@ -54,8 +54,8 @@ android {
         applicationId = "app.alifup"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "1.0.0"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -72,7 +72,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "AlifUp"
-            packageVersion = "0.2.0"
+            packageVersion = "1.0.0"
             description = "Learn to read and memorise the Quran"
             vendor = "Iqra"
             windows {

@@ -4,6 +4,18 @@ A Duolingo-style app that teaches adult beginners to read Arabic letters, using
 real Quran text and recitation. One Kotlin codebase builds both an **Android app**
 and a **Windows desktop app** (Compose Multiplatform).
 
+## Version 1.0.0
+
+The first complete version: letters, vowels and reading rules; memorising 21 short surahs;
+a Quran reader with repeat loops; letter tracing; exams with voice questions; review practice;
+badges, coins and an Android daily reminder.
+
+Lessons unlock in order and hearts are limited, as for learners. For development, set
+`UNLOCK_ALL` (`data/Course.kt`) and `DEV_UNLIMITED_HEARTS` (`engine/Progress.kt`) to `true`.
+
+Before a public release: get permission from EveryAyah (or switch recitation source), record
+the ba/bi/bu syllables, and sign the Android release build.
+
 ## Brand
 
 - **Name: AlifUp** — start at Alif (ا), the first letter, and level up: letters, reading
@@ -68,7 +80,7 @@ and a **Windows desktop app** (Compose Multiplatform).
 
 All of this is also shown in the app (ⓘ on the home screen).
 
-## What's in the first milestone
+## What's in it
 
 14 units, 40 lessons:
 

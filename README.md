@@ -124,6 +124,10 @@ range loops (once, 3×, until stopped). The basmala above each surah is Tanzil's
 first exam, Al-Fātiḥah by heart, 1/5/all surahs memorised. They are worked out from progress,
 so nothing extra is saved; new ones are celebrated on the results screen.
 
+**Backup** (Settings) — "Copy backup code" puts all progress on the clipboard as one block of
+text (send it to yourself in any chat); "Restore from a backup code" takes it back on another
+device. Works the same on Android and Windows.
+
 **Daily reminder** (Settings, Android only) — off, 8:00, 13:00, 18:00 or 21:00; only shown if
 you haven't practised yet that day, and set again after the phone restarts.
 

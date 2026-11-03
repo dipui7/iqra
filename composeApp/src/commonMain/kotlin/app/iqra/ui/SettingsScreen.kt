@@ -37,6 +37,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.iqra.engine.DAILY_GOALS
 import app.iqra.data.Letters
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import app.iqra.engine.Backup
 import app.iqra.engine.ProgressStore
 import app.iqra.remindersSupported
 import app.iqra.engine.Skills
@@ -51,6 +55,11 @@ private fun goalName(xp: Int) = when (xp) {
 @Composable
 fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
     var confirmReset by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboardManager.current
+    var backupMessage by remember { mutableStateOf<String?>(null) }
+    var restoring by remember { mutableStateOf(false) }
+    var restoreText by remember { mutableStateOf("") }
+    var restoreError by remember { mutableStateOf<String?>(null) }
     val progress = store.progress
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -140,6 +149,26 @@ fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
             }
         }
 
+        SectionLabel("BACKUP")
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(palette.card)) {
+            Row(
+                Modifier.fillMaxWidth().clickable {
+                    clipboard.setText(AnnotatedString(Backup.export(store.progress)))
+                    backupMessage = "Backup code copied. Paste it somewhere safe — a message to yourself works."
+                }.padding(16.dp),
+            ) { Text("Copy backup code", style = MaterialTheme.typography.bodyLarge, color = palette.accent) }
+            HorizontalDivider(Modifier.padding(start = 16.dp), color = palette.separator)
+            Row(Modifier.fillMaxWidth().clickable { restoreText = ""; restoreError = null; restoring = true }.padding(16.dp)) {
+                Text("Restore from a backup code", style = MaterialTheme.typography.bodyLarge, color = palette.accent)
+            }
+        }
+        Text(
+            backupMessage ?: "Moves your progress to a new phone or computer, or keeps it safe before reinstalling.",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (backupMessage != null) palette.correct else palette.secondary,
+            modifier = Modifier.padding(start = 16.dp, top = 6.dp),
+        )
+
         Spacer(Modifier.padding(top = 12.dp))
         Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(palette.card)
@@ -147,6 +176,38 @@ fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
         ) {
             Text("Reset progress", style = MaterialTheme.typography.bodyLarge, color = palette.wrong)
         }
+    }
+
+    if (restoring) {
+        AlertDialog(
+            onDismissRequest = { restoring = false },
+            title = { Text("Restore progress") },
+            text = {
+                Column {
+                    Text("Paste your backup code. It replaces the progress on this device.")
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = restoreText, onValueChange = { restoreText = it; restoreError = null },
+                        placeholder = { Text("ALIFUP1:…") }, maxLines = 4, modifier = Modifier.fillMaxWidth(),
+                    )
+                    TextButton({ restoreText = clipboard.getText()?.text.orEmpty(); restoreError = null }) { Text("Paste") }
+                    restoreError?.let { Text(it, color = palette.wrong, style = MaterialTheme.typography.bodySmall) }
+                }
+            },
+            confirmButton = {
+                TextButton({
+                    val restored = Backup.import(restoreText)
+                    if (restored == null) {
+                        restoreError = "That isn't a complete AlifUp backup code. Copy the whole code and try again."
+                    } else {
+                        store.restore(restored)
+                        restoring = false
+                        backupMessage = "Progress restored: ${restored.completed.size} lessons, ${restored.xp} XP."
+                    }
+                }) { Text("Restore") }
+            },
+            dismissButton = { TextButton({ restoring = false }) { Text("Cancel") } },
+        )
     }
 
     if (confirmReset) {

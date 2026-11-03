@@ -217,6 +217,12 @@ class ProgressStore {
         scheduleReminder(hour)
     }
 
+    /** Replace everything with restored progress (see [Backup]). */
+    fun restore(restored: Progress) {
+        update { restored.withRefilledHearts(nowMillis()) }
+        scheduleReminder(restored.reminderHour)
+    }
+
     /** Start over: everything is forgotten except the daily goal. */
     fun reset() = update { Progress(dailyGoal = it.dailyGoal) }
 }

@@ -33,6 +33,24 @@ private val sources = listOf(
         "https://tanzil.net",
     ),
     Source(
+        "Translation — Saheeh International",
+        "English translation by Saheeh International, from Tanzil.net. Tanzil's translations are for " +
+            "non-commercial use only; Iqra is free, with no ads or paid features.",
+        "https://tanzil.net/trans/",
+    ),
+    Source(
+        "Tajweed colours — quran-tajweed",
+        "Tajweed rule data by cpfair (github.com/cpfair/quran-tajweed), licensed under Creative Commons " +
+            "Attribution 4.0. Changed: its positions were moved onto the current Tanzil text, and the 35 marks " +
+            "whose letters differ were left out. The colours only highlight letters; the text is unchanged.",
+        "https://github.com/cpfair/quran-tajweed",
+    ),
+    Source(
+        "Surah names — Tanzil metadata",
+        "Surah names, meanings and juz divisions from Tanzil's Quran metadata, Creative Commons Attribution.",
+        "https://tanzil.net/docs/quran_metadata",
+    ),
+    Source(
         "Recitation — Mishary Rashid Alafasy",
         "Per-ayah recordings streamed from EveryAyah.com when you tap play. The audio is not bundled with the app; " +
             "an ayah you have heard is kept on your device so it plays again without internet.",

@@ -23,6 +23,9 @@ import app.iqra.data.Letters
 import app.iqra.engine.Skills
 import app.iqra.data.QuranMeta
 import app.iqra.data.QuranText
+import app.iqra.data.TajweedMarks
+import app.iqra.data.Translation
+import app.iqra.ui.ReaderExtras
 import app.iqra.engine.LessonBuilder
 import app.iqra.engine.ProgressStore
 import app.iqra.resources.Res
@@ -61,6 +64,15 @@ fun App() {
         val quran by produceState<QuranText?>(null) {
             value = withContext(Dispatchers.Default) {
                 QuranText.parse(Res.readBytes("files/quran_uthmani.xml").decodeToString())
+            }
+        }
+        // Tajweed colours and the translation, for the reader; loaded in the background.
+        val readerExtras by produceState<ReaderExtras?>(null) {
+            value = withContext(Dispatchers.Default) {
+                ReaderExtras(
+                    TajweedMarks.parse(Res.readBytes("files/tajweed.txt").decodeToString()),
+                    Translation.parse("Saheeh International", Res.readBytes("files/translation_en_sahih.txt").decodeToString()),
+                )
             }
         }
         val meta by produceState<QuranMeta?>(null) {
@@ -120,7 +132,14 @@ fun App() {
                     onBuyUnlimited = store::buyUnlimitedHearts,
                 )
                 Screen.About -> AboutScreen(onBack = { screen = Screen.Home })
-                is Screen.Reader -> ReaderScreen(q, m.surah(s.surah), onBack = { screen = Screen.Home })
+                is Screen.Reader -> ReaderScreen(
+                    q, m.surah(s.surah), onBack = { screen = Screen.Home },
+                    extras = readerExtras,
+                    showTajweed = store.progress.showTajweed,
+                    showTranslation = store.progress.showTranslation,
+                    onShowTajweed = store::setShowTajweed,
+                    onShowTranslation = store::setShowTranslation,
+                )
                 Screen.Badges -> BadgesScreen(store.progress, onBack = { screen = Screen.Home })
                 Screen.Support -> SupportScreen(onBack = { screen = Screen.Home })
                 Screen.Settings -> SettingsScreen(store, onBack = { screen = Screen.Home })

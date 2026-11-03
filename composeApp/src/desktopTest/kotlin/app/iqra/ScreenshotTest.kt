@@ -81,7 +81,12 @@ class ScreenshotTest {
         shot("settings") { app.iqra.ui.SettingsScreen(ProgressStore()) {} }
         lessonShot("trace", learn.first { it is Exercise.Trace })
         val meta = app.iqra.data.QuranMeta.parse(File("src/commonMain/composeResources/files/quran_metadata.xml").readText())
-        shot("reader") { app.iqra.ui.ReaderScreen(quran, meta.surah(112)) {} }
+        val extras = app.iqra.ui.ReaderExtras(
+            app.iqra.data.TajweedMarks.parse(File("src/commonMain/composeResources/files/tajweed.txt").readText()),
+            app.iqra.data.Translation.parse("Saheeh International", File("src/commonMain/composeResources/files/translation_en_sahih.txt").readText()),
+        )
+        shot("reader") { app.iqra.ui.ReaderScreen(quran, meta.surah(112), {}, extras) }
+        shot("reader-fatiha") { app.iqra.ui.ReaderScreen(quran, meta.surah(1), {}, extras) }
         shot("surah-list") {
             androidx.compose.foundation.layout.Column(
                 Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 20.dp),

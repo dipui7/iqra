@@ -33,6 +33,21 @@ and a **Windows desktop app** (Compose Multiplatform).
   MIT License (`licenses/letter-audio-MIT.txt`).
 - **Font — [Amiri Quran](https://github.com/aliftype/amiri)**, SIL Open Font License 1.1
   (`licenses/AmiriQuran-OFL.txt`).
+- **Translation — Saheeh International**, from [Tanzil](https://tanzil.net/trans/)
+  (`files/translation_en_sahih.txt`, verbatim with Tanzil's header). Tanzil's terms: non-commercial
+  use only. Fine while Iqra is free with no ads or paid features; anything else needs the
+  publisher's permission.
+- **Tajweed colours — [cpfair/quran-tajweed](https://github.com/cpfair/quran-tajweed)**, CC BY 4.0
+  (`files/tajweed.txt`). Its positions refer to a 2017 copy of the Tanzil text, so
+  `tools/tajweed/map_tajweed.py` compares that copy with ours ayah by ayah and moves each mark to
+  the same character in ours: 60,022 of 60,057 marks are kept, the 35 whose letters changed are
+  dropped, and every kept mark is checked to sit on the letters its rule is about (also a test).
+  Only colours are added; the Quran text is never changed.
+- **Surah names and juz — [Tanzil metadata](https://tanzil.net/docs/quran_metadata)**
+  (`files/quran_metadata.xml`, unmodified), Creative Commons Attribution.
+- **Word-by-word meanings: not yet.** No source with clear terms has been found. Apps like Quranly
+  usually use the Quran Foundation (quran.com) API, which needs the app to be registered with them
+  and their terms accepted before use.
 - **Lesson text** (letter names, hints, transliterations) is written for this app and is not
   Quranic text. No Quranic text is generated or altered by AI or code.
 

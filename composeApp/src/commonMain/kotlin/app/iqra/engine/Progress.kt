@@ -74,6 +74,9 @@ data class Progress(
     val unlimitedSince: Long = -1,
     /** Hour of the daily reminder (0–23), or null for none. Android only. */
     val reminderHour: Int? = null,
+    /** Reader settings: colour tajweed rules, and show the English translation under each ayah. */
+    val showTajweed: Boolean = true,
+    val showTranslation: Boolean = true,
 ) {
     /** Bought unlimited hearts last only while the streak is unbroken. */
     fun ownsUnlimitedHearts(today: Long): Boolean =
@@ -198,6 +201,10 @@ class ProgressStore {
     fun recordAnswer(skill: String, correct: Boolean) = update { it.recordAnswer(skill, correct, todayEpochDay()) }
 
     fun setDailyGoal(xp: Int) = update { it.copy(dailyGoal = xp) }
+
+    fun setShowTajweed(on: Boolean) = update { it.copy(showTajweed = on) }
+
+    fun setShowTranslation(on: Boolean) = update { it.copy(showTranslation = on) }
 
     fun setReminder(hour: Int?) {
         update { it.copy(reminderHour = hour) }

@@ -46,6 +46,16 @@ import androidx.compose.ui.unit.dp
 import app.iqra.data.AyahRef
 import app.iqra.data.QuranMeta
 import app.iqra.data.SurahInfo
+import app.iqra.data.TajweedGroup
+import app.iqra.data.TajweedMark
+import app.iqra.data.TajweedMarks
+import app.iqra.data.Translation
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import app.iqra.data.QuranText
 import app.iqra.data.arabicDigits
 import app.iqra.engine.RepeatPlan
@@ -93,7 +103,17 @@ fun SurahList(meta: QuranMeta, onOpen: (Int) -> Unit) {
  * which is how most people memorise.
  */
 @Composable
-fun ReaderScreen(quran: QuranText, info: SurahInfo, onBack: () -> Unit) {
+fun ReaderScreen(
+    quran: QuranText,
+    info: SurahInfo,
+    onBack: () -> Unit,
+    /** Tajweed marks and translation; null while they are still loading. */
+    extras: ReaderExtras? = null,
+    showTajweed: Boolean = true,
+    showTranslation: Boolean = true,
+    onShowTajweed: (Boolean) -> Unit = {},
+    onShowTranslation: (Boolean) -> Unit = {},
+) {
     val surah = info.number
     val ayat = remember(surah) { quran.surah(surah) }
     val count = ayat.size
@@ -167,6 +187,11 @@ fun ReaderScreen(quran: QuranText, info: SurahInfo, onBack: () -> Unit) {
                     "Tap an ayah to hear it. Set repeats below to memorise.",
                     style = MaterialTheme.typography.bodySmall, color = palette.secondary,
                 )
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Toggle("Tajweed colours", showTajweed) { onShowTajweed(!showTajweed) }
+                    Toggle("Translation", showTranslation) { onShowTranslation(!showTranslation) }
+                }
+                if (showTajweed) TajweedKey()
             }
             if (bismillah != null) {
                 item {
@@ -196,13 +221,19 @@ fun ReaderScreen(quran: QuranText, info: SurahInfo, onBack: () -> Unit) {
                 ) {
                     AyahNumber(ref.aya, highlighted = current, dimmed = !inRange)
                     Spacer(Modifier.width(10.dp))
-                    Text(
-                        text,
-                        style = arabicStyle(if (text.length > 120) 24 else 28, lineFactor = 2.0)
-                            .copy(textDirection = TextDirection.Rtl, color = if (inRange) palette.text else palette.secondary),
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(Modifier.weight(1f)) {
+                        val marks = if (showTajweed) extras?.tajweed?.of(ref).orEmpty() else emptyList()
+                        Text(
+                            colouredAyah(text, marks),
+                            style = arabicStyle(if (text.length > 120) 24 else 28, lineFactor = 2.0)
+                                .copy(textDirection = TextDirection.Rtl, color = if (inRange) palette.text else palette.secondary),
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (showTranslation) extras?.translation?.of(ref)?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.secondary, modifier = Modifier.padding(top = 2.dp))
+                        }
+                    }
                 }
             }
         }
@@ -311,4 +342,64 @@ private fun AyahNumber(n: Int, highlighted: Boolean, dimmed: Boolean = false) {
             ),
         )
     }
+}
+
+/** Data the reader adds to the Quran text: tajweed colours and a translation. */
+class ReaderExtras(val tajweed: TajweedMarks, val translation: Translation)
+
+/** The ayah exactly as written, with tajweed letters coloured (colour only; the text is unchanged). */
+@Composable
+private fun colouredAyah(text: String, marks: List<TajweedMark>): AnnotatedString {
+    if (marks.isEmpty()) return AnnotatedString(text)
+    val dark = isSystemInDarkTheme()
+    return buildAnnotatedString {
+        append(text)
+        for (m in marks) if (m.end <= text.length) addStyle(SpanStyle(color = tajweedColour(m.group, dark)), m.start, m.end)
+    }
+}
+
+fun tajweedColour(group: TajweedGroup, dark: Boolean): Color = when (group) {
+    TajweedGroup.Madd -> if (dark) Color(0xFFFF6B5B) else Color(0xFFC0392B)
+    TajweedGroup.Ghunnah -> if (dark) Color(0xFFF5B041) else Color(0xFFD35400)
+    TajweedGroup.Ikhfa -> if (dark) Color(0xFFBB8FCE) else Color(0xFF8E44AD)
+    TajweedGroup.Idghaam -> if (dark) Color(0xFF58D68D) else Color(0xFF1E8449)
+    TajweedGroup.Iqlab -> if (dark) Color(0xFF48C9B0) else Color(0xFF138D75)
+    TajweedGroup.Qalqalah -> if (dark) Color(0xFF5DADE2) else Color(0xFF2471A3)
+    TajweedGroup.Silent -> if (dark) Color(0xFF7F8C8D) else Color(0xFFA6ACAF)
+}
+
+/** What each colour means; tap a rule to read what it is. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TajweedKey() {
+    val dark = isSystemInDarkTheme()
+    var open by remember { mutableStateOf<TajweedGroup?>(null) }
+    FlowRow(
+        Modifier.padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        TajweedGroup.entries.forEach { g ->
+            Row(
+                Modifier.clip(RoundedCornerShape(8.dp)).clickable { open = if (open == g) null else g }.padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(tajweedColour(g, dark)))
+                Spacer(Modifier.width(4.dp))
+                Text(g.label, style = MaterialTheme.typography.bodySmall, color = palette.text)
+            }
+        }
+    }
+    open?.let { Text("${it.label}: ${it.hint}", style = MaterialTheme.typography.bodySmall, color = palette.secondary, modifier = Modifier.padding(top = 2.dp)) }
+}
+
+@Composable
+private fun Toggle(label: String, on: Boolean, onClick: () -> Unit) {
+    Text(
+        label,
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (on) palette.onAccent else palette.text,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) palette.accent else palette.card)
+            .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 6.dp),
+    )
 }

@@ -26,6 +26,11 @@ enum class LessonKind {
     HifzLearn,
     /** Recall a surah from memory: next ayah, next word, listening, ordering. */
     HifzRecall,
+    /**
+     * End-of-stage exam: mostly quiz questions, some harder ones, and at least one voice
+     * question. No hearts, no second tries; passing the first time earns a coin.
+     */
+    Exam,
 }
 
 enum class Track { Reading, Hifz }
@@ -49,6 +54,24 @@ data class CourseUnit(
 
 /** An ayah that consists only of opening letters, with the letters it is made of. */
 data class Opening(val ref: AyahRef, val letters: List<Letter>)
+
+/** End-of-stage exams and what each one covers. */
+object Exams {
+    const val LETTERS = "exam-letters"
+    const val VOWELS = "exam-vowels"
+    const val READING = "exam-reading"
+    const val HIFZ_GROUP = 5
+
+    /** Memorised surahs in groups of [HIFZ_GROUP], in learning order; a smaller last group gets no exam. */
+    val hifzGroups: List<List<Int>> = Hifz.surahs.map { it.number }.chunked(HIFZ_GROUP).filter { it.size == HIFZ_GROUP }
+
+    fun hifz(group: Int) = "exam-hifz-${group + 1}"
+
+    fun hifzGroupOf(examId: String): List<Int>? =
+        examId.removePrefix("exam-hifz-").toIntOrNull()?.let { hifzGroups.getOrNull(it - 1) }
+
+    fun isExam(lessonId: String) = lessonId.startsWith("exam-")
+}
 
 /** While the app is in development every lesson is open. Set to false to unlock in order again. */
 const val UNLOCK_ALL = true
@@ -74,7 +97,7 @@ object Course {
             letterUnit(4, "Teeth and loops", sin, shin, sad, dad),
             letterUnit(5, "Heavy and throat letters", taa, zaa, ayn, ghayn),
             letterUnit(6, "Fa to Lam", fa, qaf, kaf, lam),
-            letterUnit(7, "The last five", mim, nun, ha, waw, ya),
+            letterUnit(7, "The last five", mim, nun, ha, waw, ya).withExam(Exams.LETTERS, "Exam: all 28 letters"),
             CourseUnit(
                 id = "u8",
                 title = "Short vowels",
@@ -95,7 +118,7 @@ object Course {
                     Lesson("u9-listen", "Listen and pick", LessonKind.Openings),
                     Lesson("u9-review", "Review", LessonKind.Openings),
                 ),
-            ),
+            ).withExam(Exams.VOWELS, "Exam: vowels and opening letters"),
             ruleUnit(10, "No vowel", Rules.sukun),
             ruleUnit(11, "Doubled letters", Rules.shadda),
             ruleUnit(12, "The \"n\" endings", Rules.tanwin),
@@ -110,7 +133,7 @@ object Course {
                     Lesson("u14-quran", "Marks in the Quran", LessonKind.QuranMarks),
                     Lesson("u14-review", "Final review", LessonKind.ReadingReview),
                 ),
-            ),
+            ).withExam(Exams.READING, "Exam: reading"),
         )
     }
 
@@ -137,9 +160,12 @@ object Course {
     fun rulesUpTo(unit: CourseUnit): List<Rule> =
         units.take(units.indexOf(unit) + 1).mapNotNull { it.rule }
 
-    /** The memorisation track: one unit per short surah. */
+    private fun CourseUnit.withExam(id: String, title: String) =
+        copy(lessons = lessons + Lesson(id, title, LessonKind.Exam))
+
+    /** The memorisation track: one unit per short surah, with an exam after every [Exams.HIFZ_GROUP]. */
     val hifzUnits: List<CourseUnit> = Hifz.surahs.map { s ->
-        CourseUnit(
+        val unit = CourseUnit(
             id = "h${s.number}",
             title = s.name,
             subtitle = "${s.meaning} · ${Hifz.ayahCount.getValue(s.number)} ayat",
@@ -152,6 +178,9 @@ object Course {
                 Lesson("h${s.number}-recall", "Recite from memory", LessonKind.HifzRecall),
             ),
         )
+        val group = Exams.hifzGroups.indexOfFirst { g -> g.last() == s.number }
+        if (group < 0) unit
+        else unit.withExam(Exams.hifz(group), "Exam: ${Exams.hifzGroups[group].size} surahs")
     }
 
     private val allUnits = units + hifzUnits

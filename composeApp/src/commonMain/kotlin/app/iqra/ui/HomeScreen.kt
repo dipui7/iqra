@@ -50,10 +50,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.rounded.Stars
+import androidx.compose.material.icons.rounded.VolunteerActivism
 import app.iqra.data.Course
 import app.iqra.data.CourseUnit
+import app.iqra.data.Exams
 import app.iqra.data.Track
 import app.iqra.engine.MAX_HEARTS
+import app.iqra.engine.UNLIMITED_HEARTS_PRICE
 import app.iqra.engine.Progress
 import app.iqra.nowMillis
 import app.iqra.todayEpochDay
@@ -65,18 +69,24 @@ fun HomeScreen(
     onAbout: () -> Unit,
     onPractice: () -> Unit = {},
     onSettings: () -> Unit = {},
+    onSupport: () -> Unit = {},
+    onBuyUnlimited: () -> Unit = {},
 ) {
     var noHearts by remember { mutableStateOf(false) }
     var track by remember { mutableStateOf(Track.Reading) }
-    val start = { id: String -> if (progress.hearts > 0) onStart(id) else noHearts = true }
     val today = todayEpochDay()
+    val start = { id: String ->
+        // Exams use no hearts, so they can always be taken.
+        if (progress.hearts > 0 || progress.hasUnlimitedHearts(today) || Exams.isExam(id)) onStart(id) else noHearts = true
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { Header(progress, onAbout, onSettings) }
+        item { Header(progress, onAbout, onSettings, onSupport) }
+        item { CoinsCard(progress, today, onBuyUnlimited) }
         if (progress.skills.isNotEmpty()) item { PracticeCard(progress.dueCount(today), progress.hearts < MAX_HEARTS, onPractice) }
         item { TrackSwitch(track) { track = it } }
         if (track == Track.Hifz) {
@@ -123,13 +133,14 @@ fun HomeScreen(
 }
 
 @Composable
-private fun Header(progress: Progress, onAbout: () -> Unit, onSettings: () -> Unit) {
+private fun Header(progress: Progress, onAbout: () -> Unit, onSettings: () -> Unit, onSupport: () -> Unit) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Iqra", style = MaterialTheme.typography.displaySmall, color = palette.text)
                 Text("Learn to read the Quran, letter by letter", color = palette.secondary)
             }
+            IconButton(onClick = onSupport) { Icon(Icons.Rounded.VolunteerActivism, "Help people in need", tint = palette.secondary) }
             IconButton(onClick = onAbout) { Icon(Icons.Rounded.Info, "Sources and licences", tint = palette.secondary) }
             IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = palette.secondary) }
         }
@@ -137,7 +148,11 @@ private fun Header(progress: Progress, onAbout: () -> Unit, onSettings: () -> Un
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Stat(Icons.Rounded.LocalFireDepartment, palette.streak, "${progress.currentStreak(todayEpochDay())}", "day streak", Modifier.weight(1f))
             Stat(Icons.Rounded.Bolt, palette.accent, "${progress.xp}", "XP", Modifier.weight(1f))
-            Stat(Icons.Rounded.Favorite, palette.heart, "${progress.hearts}/$MAX_HEARTS", heartsLabel(progress), Modifier.weight(1f))
+            if (progress.hasUnlimitedHearts(todayEpochDay())) {
+                Stat(Icons.Rounded.Favorite, palette.heart, "∞", "hearts", Modifier.weight(1f))
+            } else {
+                Stat(Icons.Rounded.Favorite, palette.heart, "${progress.hearts}/$MAX_HEARTS", heartsLabel(progress), Modifier.weight(1f))
+            }
         }
         Spacer(Modifier.height(10.dp))
         DailyGoal(progress.xpOn(todayEpochDay()), progress.dailyGoal)
@@ -208,6 +223,38 @@ private fun PracticeCard(due: Int, canEarnHeart: Boolean, onPractice: () -> Unit
             )
         }
         Icon(Icons.Rounded.PlayArrow, "Start practice", tint = palette.accent)
+    }
+}
+
+/** Coins from exams, and unlocking unlimited hearts with them. */
+@Composable
+private fun CoinsCard(progress: Progress, today: Long, onBuy: () -> Unit) {
+    val owned = progress.ownsUnlimitedHearts(today)
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(palette.card).padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(36.dp).clip(CircleShape).background(palette.streak), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Stars, null, tint = palette.onAccent, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                "${progress.coins} ${if (progress.coins == 1) "coin" else "coins"}",
+                style = MaterialTheme.typography.titleMedium, color = palette.text,
+            )
+            Text(
+                when {
+                    owned -> "Unlimited hearts are yours while your streak lasts"
+                    progress.canBuyUnlimitedHearts(today) -> "Enough for unlimited hearts"
+                    else -> "Pass exams to earn coins · $UNLIMITED_HEARTS_PRICE unlock unlimited hearts"
+                },
+                style = MaterialTheme.typography.bodySmall, color = palette.secondary,
+            )
+        }
+        if (progress.canBuyUnlimitedHearts(today)) {
+            TextButton(onClick = onBuy) { Text("Unlock") }
+        }
     }
 }
 

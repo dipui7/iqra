@@ -11,6 +11,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 const val MAX_HEARTS = 5
+
+/**
+ * While the app is in development hearts never run out. Set to false before release, so
+ * learners have [MAX_HEARTS] hearts again.
+ */
+const val DEV_UNLIMITED_HEARTS = true
+
+/** Coins needed to unlock unlimited hearts; one coin is earned for each exam passed. */
+const val UNLIMITED_HEARTS_PRICE = 3
 const val HEART_REFILL_MS = 20 * 60 * 1000L
 const val LESSON_XP = 10
 const val PERFECT_BONUS_XP = 5
@@ -54,7 +63,38 @@ data class Progress(
     /** XP earned on [xpDay]. */
     val xpToday: Int = 0,
     val xpDay: Long = -1,
+    /** Earned by passing an exam for the first time. */
+    val coins: Int = 0,
+    val passedExams: Set<String> = emptySet(),
+    /** Unlimited hearts bought with coins; lost again when the streak breaks. */
+    val unlimitedHearts: Boolean = false,
+    /** Day [unlimitedHearts] was bought, so it lasts through that day even before a lesson. */
+    val unlimitedSince: Long = -1,
 ) {
+    /** Bought unlimited hearts last only while the streak is unbroken. */
+    fun ownsUnlimitedHearts(today: Long): Boolean =
+        unlimitedHearts && maxOf(lastActiveDay, unlimitedSince) >= today - 1
+
+    fun hasUnlimitedHearts(today: Long): Boolean = DEV_UNLIMITED_HEARTS || ownsUnlimitedHearts(today)
+
+    /** A missed day ends bought unlimited hearts; they must be bought again with coins. */
+    fun expireUnlimitedHearts(today: Long): Progress =
+        if (unlimitedHearts && !ownsUnlimitedHearts(today)) copy(unlimitedHearts = false) else this
+
+    fun canBuyUnlimitedHearts(today: Long): Boolean =
+        coins >= UNLIMITED_HEARTS_PRICE && !ownsUnlimitedHearts(today)
+
+    fun buyUnlimitedHearts(today: Long): Progress =
+        if (!canBuyUnlimitedHearts(today)) this
+        else copy(coins = coins - UNLIMITED_HEARTS_PRICE, unlimitedHearts = true, unlimitedSince = today, hearts = MAX_HEARTS)
+
+    /** A passed exam counts as a completed lesson; only the first pass earns a coin. */
+    fun passExam(examId: String, xpGained: Int, today: Long): Progress {
+        val first = examId !in passedExams
+        return completeLesson(examId, xpGained, today)
+            .copy(passedExams = passedExams + examId, coins = coins + if (first) 1 else 0)
+    }
+
     fun xpOn(today: Long): Int = if (xpDay == today) xpToday else 0
 
     fun recordAnswer(skill: String, correct: Boolean, today: Long): Progress =
@@ -129,16 +169,22 @@ class ProgressStore {
         readProgress()?.let { json.decodeFromString<Progress>(it) } ?: Progress()
     } catch (e: Exception) {
         Progress()
-    }.withRefilledHearts(nowMillis())
+    }.withRefilledHearts(nowMillis()).expireUnlimitedHearts(todayEpochDay())
 
     fun update(change: (Progress) -> Progress) {
         progress = change(progress)
         writeProgress(json.encodeToString(Progress.serializer(), progress))
     }
 
-    fun refreshHearts() = update { it.withRefilledHearts(nowMillis()) }
+    fun refreshHearts() = update { it.withRefilledHearts(nowMillis()).expireUnlimitedHearts(todayEpochDay()) }
 
-    fun loseHeart() = update { it.loseHeart(nowMillis()) }
+    fun loseHeart() {
+        if (!progress.hasUnlimitedHearts(todayEpochDay())) update { it.loseHeart(nowMillis()) }
+    }
+
+    fun passExam(examId: String, xpGained: Int) = update { it.passExam(examId, xpGained, todayEpochDay()) }
+
+    fun buyUnlimitedHearts() = update { it.buyUnlimitedHearts(todayEpochDay()) }
 
     fun completeLesson(lessonId: String, xpGained: Int) =
         update { it.completeLesson(lessonId, xpGained, todayEpochDay()) }

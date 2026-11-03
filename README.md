@@ -81,6 +81,31 @@ on the home screen builds a session from what is due, weakest first. Practice co
 and gives one back, so it is also the way to keep going when hearts run out. Progress is saved locally:
 `%APPDATA%\Iqra\progress.json` on Windows, app storage on Android.
 
+**Exams and coins.** Each stage ends with an exam: after the 28 letters, after the vowels and
+opening letters, after the reading rules, and after every 5 memorised surahs. An exam has 10
+questions: half ordinary quiz questions, a fifth harder ones (look-alike letters in joined
+forms, "which one is read …", next word), and the rest voice questions (always at least one).
+Exams use no hearts and give no second tries; 80% passes. Passing an exam for the first time
+earns 1 coin (retakes earn none). 3 coins unlock unlimited hearts, which last until the streak
+breaks (a whole day missed); then they cost 3 coins again.
+
+**Voice questions** (`engine/VoiceMatch.kt`): say a letter's name, recite an opening, read a
+short ayah aloud, or recite a surah's first ayah from memory. The recording is compared on the
+device (never uploaded) with the right recording and three decoys, using MFCC features and
+dynamic time warping; it passes if it sounds closest to the right one, with 3 tries. This checks
+how alike the recordings sound — it is not a pronunciation or tajweed check, and the app says
+so. It has only been tested with the reference recordings themselves (including slowed,
+quieter, noisy copies), not yet with real learners' voices; thresholds may need tuning.
+
+**Help others.** A page (heart-in-hand icon on the home screen) lists well-known organisations
+helping people in Gaza, Sudan and DR Congo, linking to their own websites. The app handles no
+money and is not affiliated with them. Review the list before each release, and check the app
+stores' rules on linking to donations.
+
+**Developer switches** — both must be set back before release:
+- `UNLOCK_ALL = true` in `data/Course.kt`: every lesson is open.
+- `DEV_UNLIMITED_HEARTS = true` in `engine/Progress.kt`: hearts never run out (release: 5 hearts).
+
 ## Letter sounds
 
 Each letter has its own short recordings, bundled with the app in

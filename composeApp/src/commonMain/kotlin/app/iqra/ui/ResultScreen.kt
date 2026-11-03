@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.HeartBroken
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,11 +34,18 @@ fun ResultScreen(result: LessonResult, streak: Int, onContinue: () -> Unit) {
         Spacer(Modifier.weight(1f))
         val tint = if (result.passed) palette.accent else palette.heart
         Box(Modifier.size(96.dp).clip(CircleShape).background(tint), contentAlignment = Alignment.Center) {
-            Icon(if (result.passed) Icons.Rounded.Check else Icons.Rounded.HeartBroken, null, tint = palette.onAccent, modifier = Modifier.size(56.dp))
+            val icon = when {
+                result.passed -> Icons.Rounded.Check
+                result.exam -> Icons.Rounded.Refresh
+                else -> Icons.Rounded.HeartBroken
+            }
+            Icon(icon, null, tint = palette.onAccent, modifier = Modifier.size(56.dp))
         }
         Spacer(Modifier.height(24.dp))
         Text(
             when {
+                result.exam && result.passed -> "Exam passed"
+                result.exam -> "Not passed yet"
                 !result.passed -> "Out of hearts"
                 result.practice -> "Practice complete"
                 else -> "Lesson complete"
@@ -45,16 +53,21 @@ fun ResultScreen(result: LessonResult, streak: Int, onContinue: () -> Unit) {
             style = MaterialTheme.typography.displaySmall, color = palette.text,
         )
         Text(
-            if (result.passed) result.title
-            else "Mistakes are how we learn. Your hearts refill over time — try again soon.",
+            when {
+                result.exam && !result.passed ->
+                    "You scored ${result.accuracy}%; $EXAM_PASS_PERCENT% passes. Review the lessons and try again — exams cost no hearts."
+                result.passed -> result.title
+                else -> "Mistakes are how we learn. Your hearts refill over time — try again soon."
+            },
             color = palette.secondary, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp),
         )
         if (result.passed) {
             Spacer(Modifier.height(32.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ResultStat("+${result.xp}", "XP", palette.accent, Modifier.weight(1f))
-                ResultStat("${result.accuracy}%", "Accuracy", palette.correct, Modifier.weight(1f))
-                if (result.heartGained) ResultStat("+1", "Heart", palette.heart, Modifier.weight(1f))
+                ResultStat("${result.accuracy}%", if (result.exam) "Score" else "Accuracy", palette.correct, Modifier.weight(1f))
+                if (result.coinEarned) ResultStat("+1", "Coin", palette.streak, Modifier.weight(1f))
+                else if (result.heartGained) ResultStat("+1", "Heart", palette.heart, Modifier.weight(1f))
                 else ResultStat("$streak", if (streak == 1) "Day streak" else "Days streak", palette.streak, Modifier.weight(1f))
             }
         }

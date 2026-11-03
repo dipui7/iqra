@@ -1,8 +1,11 @@
 package app.iqra.engine
 
+import app.iqra.data.AyahRef
 import app.iqra.data.Course
+import app.iqra.data.Exams
 import app.iqra.data.CourseUnit
 import app.iqra.data.Haraka
+import app.iqra.data.Hifz
 import app.iqra.data.Harakat
 import app.iqra.data.Lesson
 import app.iqra.data.LessonKind
@@ -17,6 +20,7 @@ import app.iqra.data.QuranWord
 import app.iqra.data.Rule
 import app.iqra.data.Rules
 import app.iqra.data.Sound
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
@@ -47,6 +51,7 @@ class LessonBuilder(
             LessonKind.QuranMarks -> ruleQuran(Rules.all, questions = 12)
             LessonKind.HifzLearn -> hifz.learn(unit.surah!!)
             LessonKind.HifzRecall -> hifz.recall(unit.surah!!)
+            LessonKind.Exam -> exam(lesson.id)
         }
     }
 
@@ -518,5 +523,162 @@ class LessonBuilder(
                 )
             }
         }.shuffled(random)
+    }
+    // --- Exams ---------------------------------------------------------------------------
+
+    /**
+     * An end-of-stage exam of [size] questions: half ordinary quiz questions, a fifth harder
+     * ones, and the rest voice questions, always at least one.
+     */
+    fun exam(examId: String, size: Int = 10): List<Exercise> {
+        val skills = examSkills(examId)
+        val voices = examVoices(examId).shuffled(random)
+        val hardCount = (size * 0.2).roundToInt()
+        val voiceCount = maxOf(1, size - (size * 0.5).roundToInt() - hardCount).coerceAtMost(voices.size)
+        val quizCount = size - hardCount - voiceCount
+        val quiz = distinctQuestions(quizCount) { skillQuestion(skills.random(random)) }
+        val hard = distinctQuestions(hardCount) { hardQuestion(skills.random(random)) }
+        return (quiz + hard + voices.take(voiceCount)).shuffled(random)
+    }
+
+    /** Up to [n] questions from [make], skipping repeats of the same prompt and answer. */
+    private fun distinctQuestions(n: Int, make: () -> Exercise.Choice?): List<Exercise.Choice> {
+        val out = mutableListOf<Exercise.Choice>()
+        var tries = 0
+        while (out.size < n && tries++ < n * 10) {
+            val q = make() ?: continue
+            if (out.none { it.prompt == q.prompt && it.options[it.correct] == q.options[q.correct] }) out += q
+        }
+        return out
+    }
+
+    private fun examSkills(examId: String): List<String> = when (examId) {
+        Exams.LETTERS -> Letters.all.map(Skills::letter)
+        Exams.VOWELS -> Harakat.all.map(Skills::vowel)
+        Exams.READING -> Rules.all.map(Skills::rule)
+        else -> Exams.hifzGroupOf(examId)?.map(Skills::surah) ?: error("Unknown exam $examId")
+    }
+
+    /** Harder versions: look-alike letters in joined forms, reading with similar options, next word. */
+    private fun hardQuestion(skill: String): Exercise.Choice? {
+        val (kind, key) = skill.split(':', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
+        return when (kind) {
+            "letter" -> Letters.all.firstOrNull { it.key == key }?.let(::lookAlikeForm)
+            "vowel" -> Harakat.all.firstOrNull { it.sound == key }?.let { whichSyllable(consonants.random(random), it) }
+            "rule" -> Rules.all.firstOrNull { it.key == key }?.let(::whichIsRead)
+            "surah" -> key.toIntOrNull()?.let { hifz.nextWord(it) ?: hifz.reviewQuestion(it) }
+            else -> null
+        }
+    }
+
+    /** Letters that differ only by dots or small details. */
+    private val lookAlikes: List<List<Letter>> = with(Letters) {
+        listOf(
+            listOf(ba, ta, tha, nun, ya), listOf(jim, haa, kha), listOf(dal, dhal), listOf(ra, zay),
+            listOf(sin, shin), listOf(sad, dad), listOf(taa, zaa), listOf(ayn, ghayn), listOf(fa, qaf),
+        )
+    }
+
+    /** "Which letter is this, in the middle of a word?" with look-alikes as the other answers. */
+    private fun lookAlikeForm(letter: Letter): Exercise.Choice {
+        val family = lookAlikes.firstOrNull { letter in it }.orEmpty() - letter
+        val others = (family.shuffled(random) + (Letters.all - family.toSet() - letter).shuffled(random)).take(3)
+        val choices = (others + letter).shuffled(random)
+        val (where, form) = if (letter.joins) "in the middle of a word" to letter.medial else "at the end of a word" to letter.final
+        return Exercise.Choice(
+            prompt = "Which letter is this, $where?",
+            big = form,
+            options = choices.map { Option(it.char, arabic = true, sound = audio.name(it)) },
+            correct = choices.indexOf(letter),
+            audio = audio.name(letter),
+            audioAfterAnswer = true,
+            explanation = "${letter.char}  is ${letter.name}: ${letter.hint}",
+            skill = Skills.letter(letter),
+        )
+    }
+
+    /** "Which one is read "bi"?" — the same letter with every vowel, and a look-alike. */
+    private fun whichSyllable(letter: Letter, h: Haraka): Exercise.Choice {
+        val right = syllable(letter, h)
+        val lookAlike = lookAlikes.firstOrNull { letter in it }?.minus(letter)?.randomOrNull(random)
+            ?: (consonants - letter).random(random)
+        val wrong = (Harakat.all - h).map { syllable(letter, it) } + syllable(lookAlike, h)
+        val choices = (wrong + right).shuffled(random)
+        return Exercise.Choice(
+            prompt = "Which one is read \"${right.latin}\"?",
+            options = choices.map { Option(it.arabic, arabic = true, sound = it.sound) },
+            correct = choices.indexOf(right),
+            explanation = "${right.arabic}  is read \"${right.latin}\": ${letter.name} with ${h.name}",
+            skill = Skills.vowel(h),
+        )
+    }
+
+    private fun examVoices(examId: String): List<Exercise.Voice> {
+        val voices = when (examId) {
+            Exams.LETTERS -> letterNameVoices()
+            Exams.VOWELS -> openingVoices()
+            Exams.READING -> shortAyahVoices()
+            else -> hifzVoices(Exams.hifzGroupOf(examId).orEmpty())
+        }
+        // Without the letter recordings the openings are recited instead, so every exam has a voice question.
+        return voices.ifEmpty { openingVoices() }
+    }
+
+    private fun letterNameVoices(): List<Exercise.Voice> = Letters.all.mapNotNull { letter ->
+        val target = audio.name(letter) ?: return@mapNotNull null
+        // Decoys should sound clearly different, so none come from the letter's look-alike group.
+        val family = lookAlikes.firstOrNull { letter in it }.orEmpty()
+        val decoys = (Letters.all - family.toSet() - letter).shuffled(random).mapNotNull { audio.name(it) }.take(3)
+        Exercise.Voice(
+            prompt = "Say this letter's name",
+            big = letter.char,
+            caption = null,
+            target = target,
+            decoys = decoys,
+            reveal = letter.name,
+            skill = Skills.letter(letter),
+        )
+    }
+
+    private fun openingVoices(): List<Exercise.Voice> = Course.openings.map { opening ->
+        Exercise.Voice(
+            prompt = "Recite this opening",
+            big = quran.text(opening.ref),
+            caption = "Surah ${opening.ref.sura}, ayah ${opening.ref.aya}",
+            target = Sound.Ayah(opening.ref),
+            decoys = (Course.openings - opening).shuffled(random).take(3).map { Sound.Ayah(it.ref) },
+            reveal = opening.letters.joinToString(" · ") { it.name },
+        )
+    }
+
+    /** Ayat of Juz Amma with at most three words, to read aloud. */
+    private val shortAyat: List<AyahRef> by lazy {
+        (78..114).flatMap { quran.surah(it) }
+            .filter { (_, text) -> text.split(' ').count { w -> w.any { it in 'ء'..'ي' } } <= 3 }
+            .map { it.first }
+    }
+
+    private fun shortAyahVoices(): List<Exercise.Voice> = shortAyat.shuffled(random).take(8).map { ref ->
+        Exercise.Voice(
+            prompt = "Read this ayah aloud",
+            big = quran.text(ref),
+            caption = "${quran.suraName(ref.sura)} · $ref",
+            target = Sound.Ayah(ref),
+            decoys = (shortAyat - ref).shuffled(random).take(3).map { Sound.Ayah(it) },
+        )
+    }
+
+    /** Recite the first ayah of each surah in the group from memory. */
+    private fun hifzVoices(surahs: List<Int>): List<Exercise.Voice> = surahs.map { s ->
+        val name = Hifz.surahs.firstOrNull { it.number == s }?.name ?: quran.suraName(s)
+        Exercise.Voice(
+            prompt = "Recite the first ayah of $name from memory",
+            big = null,
+            caption = name,
+            target = Sound.Ayah(AyahRef(s, 1)),
+            decoys = (surahs - s).shuffled(random).take(3).map { Sound.Ayah(AyahRef(it, 1)) },
+            reveal = quran.text(AyahRef(s, 1)),
+            skill = Skills.surah(s),
+        )
     }
 }

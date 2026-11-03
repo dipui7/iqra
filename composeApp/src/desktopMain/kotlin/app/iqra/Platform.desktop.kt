@@ -93,6 +93,16 @@ private class CachingStream(input: InputStream, private val dest: File) : Filter
     }
 }
 
+/** The cached copy of a recitation, if it has been heard (or fetched) before. */
+internal fun cachedAudio(url: String): File? = File(audioCache, cacheName(url)).takeIf { it.exists() }
+
+internal fun saveToAudioCache(url: String, bytes: ByteArray) {
+    val dest = File(audioCache, cacheName(url))
+    val tmp = File(dest.path + ".part")
+    tmp.writeBytes(bytes)
+    if (tmp.renameTo(dest)) pruneCache() else tmp.delete()
+}
+
 private fun cacheName(url: String) = url.substringAfter("://").replace(Regex("[^A-Za-z0-9.]"), "_")
 
 /** Keep the cache under ~300 MB by dropping the least recently written files. */

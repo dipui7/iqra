@@ -54,7 +54,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import app.iqra.data.Exams
 import app.iqra.data.Sound
+import app.iqra.stopRecording
+import app.iqra.todayEpochDay
 import app.iqra.engine.Exercise
 import app.iqra.engine.Feedback
 import app.iqra.engine.LESSON_XP
@@ -80,7 +83,13 @@ data class LessonResult(
     /** A practice session, which also gives a heart back if any were missing. */
     val practice: Boolean = false,
     val heartGained: Boolean = false,
+    /** An exam: [accuracy] is the score, and [coinEarned] if it was passed for the first time. */
+    val exam: Boolean = false,
+    val coinEarned: Boolean = false,
 )
+
+/** Share of exam questions that must be answered right to pass. */
+const val EXAM_PASS_PERCENT = 80
 
 @Composable
 fun LessonScreen(
@@ -93,17 +102,30 @@ fun LessonScreen(
     /** A practice session: mistakes cost no hearts, and finishing gives one back. */
     practice: Boolean = false,
 ) {
+    val exam = Exams.isExam(lessonId)
+    val unlimited = remember { store.progress.hasUnlimitedHearts(todayEpochDay()) }
     val session = remember {
         LessonSession(
             exercises, store.progress.hearts,
             onMistake = store::loseHeart,
             onAnswer = { skill, right -> skill?.let { store.recordAnswer(it, right) } },
-            heartsMatter = !practice,
+            heartsMatter = !practice && !exam && !unlimited,
+            exam = exam,
         )
     }
 
     fun finish(passed: Boolean) {
         stopAudio()
+        stopRecording()
+        if (exam) {
+            val score = if (session.gradedCount == 0) 0 else 100 * session.rightCount / session.gradedCount
+            val ok = score >= EXAM_PASS_PERCENT
+            val firstPass = ok && lessonId !in store.progress.passedExams
+            val xp = if (ok) LESSON_XP * 2 else 0
+            if (ok) store.passExam(lessonId, xp)
+            onFinished(LessonResult(title, ok, xp, score, exam = true, coinEarned = firstPass))
+            return
+        }
         val questions = exercises.count { it !is Exercise.LetterIntro && it !is Exercise.RuleIntro && it !is Exercise.AyahIntro }
         val accuracy = if (questions == 0) 100 else (100 * questions / (questions + session.mistakes))
         val base = if (practice) PRACTICE_XP else LESSON_XP
@@ -122,7 +144,15 @@ fun LessonScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        TopBar(session, onClose = { stopAudio(); onClose() })
+        TopBar(
+            session,
+            label = when {
+                exam -> "Exam"
+                practice -> "Practice"
+                else -> null
+            },
+            onClose = { stopAudio(); stopRecording(); onClose() },
+        )
         val exercise = session.current ?: return@Column
         key(session.index) {
             Column(
@@ -135,6 +165,7 @@ fun LessonScreen(
                     is Exercise.Match -> MatchQuestion(exercise, session)
                     is Exercise.AyahIntro -> AyahIntro(exercise)
                     is Exercise.Order -> OrderQuestion(exercise, session)
+                    is Exercise.Voice -> VoiceQuestion(exercise, session)
                 }
             }
         }
@@ -145,7 +176,7 @@ fun LessonScreen(
 }
 
 @Composable
-private fun TopBar(session: LessonSession, onClose: () -> Unit) {
+private fun TopBar(session: LessonSession, label: String?, onClose: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Quit lesson", tint = palette.secondary) }
         LinearProgressIndicator(
@@ -162,8 +193,13 @@ private fun TopBar(session: LessonSession, onClose: () -> Unit) {
             Icon(Icons.Rounded.Favorite, "Hearts", tint = palette.heart, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(4.dp))
             Text("${session.hearts}", style = MaterialTheme.typography.titleMedium, color = palette.heart)
+        } else if (label != null) {
+            Text(label, style = MaterialTheme.typography.titleMedium, color = palette.accent)
         } else {
-            Text("Practice", style = MaterialTheme.typography.titleMedium, color = palette.accent)
+            // Unlimited hearts (bought with coins, or the developer switch).
+            Icon(Icons.Rounded.Favorite, "Unlimited hearts", tint = palette.heart, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("∞", style = MaterialTheme.typography.titleMedium, color = palette.heart)
         }
     }
 }
@@ -529,6 +565,13 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
                 (exercise as? Exercise.Choice)?.explanation?.let {
                     Text(it, color = palette.secondary, modifier = Modifier.padding(top = 4.dp))
                 }
+                (exercise as? Exercise.Voice)?.let { v ->
+                    v.reveal?.let {
+                        Text(it, style = if (v.big == null) arabicStyle(26) else MaterialTheme.typography.bodyLarge, color = palette.text, modifier = Modifier.padding(top = 4.dp))
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    AudioButton(v.target, "Hear the recording")
+                }
             }
         }
         when {
@@ -540,6 +583,7 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
             exercise is Exercise.Choice -> PrimaryButton("Check", enabled = session.selected != null, onClick = session::check)
             exercise is Exercise.Match -> PrimaryButton("Match all pairs", enabled = false, onClick = {})
             exercise is Exercise.Order -> PrimaryButton("Check", enabled = session.orderAnswer != null, onClick = session::check)
+            exercise is Exercise.Voice -> PrimaryButton("Record your answer above", enabled = false, onClick = {})
             else -> PrimaryButton("Continue", onClick = { session.markSolved(showFeedback = false) })
         }
     }

@@ -77,5 +77,13 @@ class ScreenshotTest {
         lessonShot("hifz-next-word", b.build(Course.lesson("h1-recall")).first { it is Exercise.Choice && it.prompt == "Which word comes next?" })
         shot("settings") { app.iqra.ui.SettingsScreen(ProgressStore()) {} }
         shot("result") { ResultScreen(LessonResult("Meet the letters", true, 15, 92), 3) {} }
+        shot("home-coins") { HomeScreen(progress.copy(coins = 3), {}, {}) }
+        shot("support") { app.iqra.ui.SupportScreen {} }
+        val exam = b.exam(app.iqra.data.Exams.READING)
+        shot("exam-voice") {
+            LessonScreen(app.iqra.data.Exams.READING, "Exam: reading", listOf(exam.first { it is Exercise.Voice }), ProgressStore(), {}, {})
+        }
+        shot("exam-passed") { ResultScreen(LessonResult("Exam: all 28 letters", true, 20, 90, exam = true, coinEarned = true), 3) {} }
+        shot("exam-failed") { ResultScreen(LessonResult("Exam: all 28 letters", false, 0, 60, exam = true), 3) {} }
     }
 }

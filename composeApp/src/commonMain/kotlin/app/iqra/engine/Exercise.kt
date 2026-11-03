@@ -52,6 +52,22 @@ sealed interface Exercise {
      */
     data class Order(val prompt: String, val items: List<String>, val caption: String? = null, val skill: String? = null) : Exercise
 
+    /**
+     * Say something into the microphone. The recording is compared with [target] and the
+     * [decoys] (see [VoiceMatch]); it passes if it sounds closest to [target].
+     * [big] is the Arabic to read aloud, or null when it is to be recited from memory.
+     * [reveal] is shown once the question is answered.
+     */
+    data class Voice(
+        val prompt: String,
+        val big: String?,
+        val caption: String?,
+        val target: Sound,
+        val decoys: List<Sound>,
+        val reveal: String? = null,
+        val skill: String? = null,
+    ) : Exercise
+
     /** Tap an Arabic item, then its matching Latin item, until all pairs are matched. */
     data class Match(val prompt: String, val pairs: List<Pair<String, String>>) : Exercise
 }

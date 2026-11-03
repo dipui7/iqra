@@ -31,6 +31,7 @@ import app.iqra.ui.LessonResult
 import app.iqra.ui.LessonScreen
 import app.iqra.ui.ResultScreen
 import app.iqra.ui.SettingsScreen
+import app.iqra.ui.SupportScreen
 import app.iqra.ui.palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -40,6 +41,7 @@ private sealed interface Screen {
     data object Home : Screen
     data object About : Screen
     data object Settings : Screen
+    data object Support : Screen
     data class Lesson(val id: String, val attempt: Int) : Screen
     data class Practice(val attempt: Int) : Screen
     data class Result(val result: LessonResult) : Screen
@@ -92,8 +94,11 @@ fun App() {
                     onAbout = { screen = Screen.About },
                     onPractice = { screen = Screen.Practice(++attempts) },
                     onSettings = { screen = Screen.Settings },
+                    onSupport = { screen = Screen.Support },
+                    onBuyUnlimited = store::buyUnlimitedHearts,
                 )
                 Screen.About -> AboutScreen(onBack = { screen = Screen.Home })
+                Screen.Support -> SupportScreen(onBack = { screen = Screen.Home })
                 Screen.Settings -> SettingsScreen(store, onBack = { screen = Screen.Home })
                 is Screen.Lesson -> {
                     val lesson = remember(s) { Course.lesson(s.id) }

@@ -33,7 +33,8 @@ enum class LessonKind {
     Exam,
 }
 
-enum class Track { Reading, Hifz }
+/** The home screen's tabs. Units belong to Reading or Hifz; Quran is the reader. */
+enum class Track { Reading, Hifz, Quran }
 
 data class Lesson(val id: String, val title: String, val kind: LessonKind)
 

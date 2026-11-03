@@ -72,9 +72,12 @@ fun HomeScreen(
     onSettings: () -> Unit = {},
     onSupport: () -> Unit = {},
     onBuyUnlimited: () -> Unit = {},
+    /** Content of the "Quran" tab (the surah list), supplied by the app since it needs the text. */
+    quranTab: @Composable () -> Unit = {},
+    track: Track = Track.Reading,
+    onTrackChange: (Track) -> Unit = {},
 ) {
     var noHearts by remember { mutableStateOf(false) }
-    var track by remember { mutableStateOf(Track.Reading) }
     val today = todayEpochDay()
     val start = { id: String ->
         // Exams use no hearts, so they can always be taken.
@@ -90,7 +93,7 @@ fun HomeScreen(
         item { CoinsCard(progress, today, onBuyUnlimited) }
         nextExam(progress)?.let { (unit, exam) -> item { NextExamCard(unit, exam.title) { start(exam.id) } } }
         if (progress.skills.isNotEmpty()) item { PracticeCard(progress.dueCount(today), progress.hearts < MAX_HEARTS, onPractice) }
-        item { TrackSwitch(track) { track = it } }
+        item { TrackSwitch(track, onTrackChange) }
         if (track == Track.Hifz) {
             item {
                 Text(
@@ -99,7 +102,11 @@ fun HomeScreen(
                 )
             }
         }
-        items(if (track == Track.Reading) Course.units else Course.hifzUnits, key = { it.id }) { unit -> UnitCard(unit, progress, start) }
+        if (track == Track.Quran) {
+            item { quranTab() }
+        } else {
+            items(if (track == Track.Reading) Course.units else Course.hifzUnits, key = { it.id }) { unit -> UnitCard(unit, progress, start) }
+        }
         item {
             Text(
                 "Quran text: Tanzil Project (tanzil.net) · Recitation: Mishary Alafasy via EveryAyah",
@@ -164,7 +171,7 @@ private fun Header(progress: Progress, onAbout: () -> Unit, onSettings: () -> Un
 @Composable
 private fun TrackSwitch(track: Track, onChange: (Track) -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(palette.separator).padding(3.dp)) {
-        listOf(Track.Reading to "Learn to read", Track.Hifz to "Memorise").forEach { (t, label) ->
+        listOf(Track.Reading to "Learn to read", Track.Hifz to "Memorise", Track.Quran to "Quran").forEach { (t, label) ->
             val selected = t == track
             Box(
                 Modifier.weight(1f).clip(RoundedCornerShape(10.dp))

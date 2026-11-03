@@ -70,6 +70,11 @@ lessons:
 Questions only ever have one right answer: an ayah that occurs twice in its surah (Al-Kāfirūn 3
 and 5) is never used as a prompt, and identical ayat may be ordered either way round.
 
+**Quran** (third tab) — a reader for Al-Fātiḥah and all of Juz ʿAmma. The ayah being
+recited is highlighted and kept in view; tap any ayah to play from there. For memorising:
+choose a range of ayat, how many times each ayah repeats (1, 3, 5, 10) and how many times the
+range loops (once, 3×, until stopped). The basmala above each surah is Tanzil's, as written.
+
 Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, daily XP goal (10/20/30/50,
 set in Settings), 5 hearts (lose one per mistake, refill one every 20 minutes), wrong answers
 come back at the end of the lesson, lessons unlock in order, completed lessons can be reviewed.
@@ -181,7 +186,8 @@ composeApp/src/
     engine/LessonSession.kt  one lesson in progress: answers, hearts, re-asking mistakes
     engine/Progress.kt     XP, streak, hearts, daily goal, review schedule, saving
     engine/Skills.kt       names of what questions practise (letter:ba, rule:shadda …)
-    ui/                    Home, Lesson, Result, Settings, About screens; theme
+    ui/                    Home, Lesson, Result, Settings, About, Reader screens; theme
+    engine/RepeatPlan.kt   what the reader plays next (repeat each ayah, loop a range)
     Platform.kt            expect: storage, audio, date, back button
   androidMain/             MediaPlayer audio, files dir storage, MainActivity
   desktopMain/             JLayer MP3 audio, %APPDATA% storage, window

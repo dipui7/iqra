@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import app.iqra.data.Course
+import app.iqra.data.Track
 import app.iqra.data.LetterAudio
 import app.iqra.data.Letters
 import app.iqra.engine.Skills
@@ -29,7 +30,9 @@ import app.iqra.ui.HomeScreen
 import app.iqra.ui.IqraTheme
 import app.iqra.ui.LessonResult
 import app.iqra.ui.LessonScreen
+import app.iqra.ui.ReaderScreen
 import app.iqra.ui.ResultScreen
+import app.iqra.ui.SurahList
 import app.iqra.ui.SettingsScreen
 import app.iqra.ui.SupportScreen
 import app.iqra.ui.palette
@@ -44,6 +47,7 @@ private sealed interface Screen {
     data object Support : Screen
     data class Lesson(val id: String, val attempt: Int) : Screen
     data class Practice(val attempt: Int) : Screen
+    data class Reader(val surah: Int) : Screen
     data class Result(val result: LessonResult) : Screen
 }
 
@@ -63,6 +67,8 @@ fun App() {
         }
         val store = remember { ProgressStore() }
         var screen by remember { mutableStateOf<Screen>(Screen.Home) }
+        // Kept here so coming back from a lesson or the reader returns to the same tab.
+        var homeTab by remember { mutableStateOf(Track.Reading) }
         var attempts by remember { mutableStateOf(0) }
 
         // Hearts refill over time; check twice a minute while the app is open.
@@ -95,9 +101,13 @@ fun App() {
                     onPractice = { screen = Screen.Practice(++attempts) },
                     onSettings = { screen = Screen.Settings },
                     onSupport = { screen = Screen.Support },
+                    quranTab = { SurahList(q) { screen = Screen.Reader(it) } },
+                    track = homeTab,
+                    onTrackChange = { homeTab = it },
                     onBuyUnlimited = store::buyUnlimitedHearts,
                 )
                 Screen.About -> AboutScreen(onBack = { screen = Screen.Home })
+                is Screen.Reader -> ReaderScreen(q, s.surah, onBack = { screen = Screen.Home })
                 Screen.Support -> SupportScreen(onBack = { screen = Screen.Home })
                 Screen.Settings -> SettingsScreen(store, onBack = { screen = Screen.Home })
                 is Screen.Lesson -> {

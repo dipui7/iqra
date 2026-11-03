@@ -94,4 +94,16 @@ class LessonBuilderTest {
         val words = Course.wordSurahs.flatMap { quran.words(it) }
         for (letter in Letters.all) assertTrue(words.any { Letters.appearsIn(letter, it.text) }, "No word with ${letter.name}")
     }
+
+    @Test
+    fun practiceWordsAreEasyToRead() {
+        repeat(50) { seed ->
+            val builder = LessonBuilder(quran, Random(seed))
+            for (lesson in Course.allLessons) for (e in builder.build(lesson)) {
+                if (e !is Exercise.Choice || e.prompt != "How is this read?") continue
+                // Words of two or more syllables never contain ʿAyn twice (e.g. "ʿaʿ").
+                for (o in e.options) assertTrue(o.label.count { it == 'ʿ' } <= 1, "${lesson.id}: hard to read \"${o.label}\"")
+            }
+        }
+    }
 }

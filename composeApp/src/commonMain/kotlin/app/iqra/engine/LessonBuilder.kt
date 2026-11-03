@@ -370,12 +370,16 @@ class LessonBuilder(
 
     /** A short practice word that uses [rule]. */
     private fun specsFor(rule: Rule): List<Spec> {
-        val c = { consonants.random(random) }
-        val end = { closable.random(random) }
+        // Each letter at most once per word, and no ʿAyn: words like عَعْ read as "ʿaʿ",
+        // which is hard to tell apart. ʿAyn is still practised in single syllables.
+        val used = mutableSetOf<Letter>()
+        val pick = { from: List<Letter> -> (from - Letters.ayn - used).random(random).also { used += it } }
+        val c = { pick(consonants) }
+        val end = { pick(closable) }
         return when (rule) {
             Rules.sukun -> if (random.nextInt(3) == 0) listOf(Spec.Open(c(), h()), Spec.Open(c(), h()), Spec.Closed(end()))
             else listOf(Spec.Open(c(), h()), Spec.Closed(end()))
-            Rules.shadda -> listOf(Spec.Open(c(), h()), Spec.Doubled(singleSound.random(random), h()))
+            Rules.shadda -> listOf(Spec.Open(c(), h()), Spec.Doubled(pick(singleSound), h()))
             Rules.tanwin -> listOf(Spec.Open(c(), h()), Spec.Tanwin(c(), h()))
             else -> if (random.nextBoolean()) listOf(Spec.Long(c(), h()), Spec.Closed(end()))
             else listOf(Spec.Open(c(), h()), Spec.Long(c(), h()))

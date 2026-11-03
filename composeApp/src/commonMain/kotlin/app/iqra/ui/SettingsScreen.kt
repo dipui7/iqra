@@ -84,7 +84,7 @@ fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(palette.card).padding(16.dp)) {
             InfoRow("Lessons completed", "${progress.completed.size}")
             InfoRow("Total XP", "${progress.xp}")
-            InfoRow("Best streak", "${progress.bestStreak} days")
+            InfoRow("Best streak", if (progress.bestStreak == 1) "1 day" else "${progress.bestStreak} days")
             InfoRow("Letters and rules practised", "${progress.skills.size}")
         }
 
@@ -101,8 +101,9 @@ fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
                             state.box < 3 -> palette.accentSoft
                             else -> palette.correctSoft
                         }
-                        Box(Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(10.dp)).background(bg), contentAlignment = Alignment.Center) {
-                            Text(letter.char, style = arabicStyle(24, lineFactor = 1.6))
+                        Box(Modifier.weight(1f).height(58.dp).clip(RoundedCornerShape(10.dp)).background(bg), contentAlignment = Alignment.Center) {
+                            // Full line height keeps dots below the letter (ب ي ج) inside the tile.
+                            Text(letter.char, style = arabicStyle(24))
                         }
                     }
                 }

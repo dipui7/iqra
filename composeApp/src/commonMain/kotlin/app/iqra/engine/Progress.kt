@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import app.iqra.nowMillis
 import app.iqra.readProgress
+import app.iqra.scheduleReminder
 import app.iqra.todayEpochDay
 import app.iqra.writeProgress
 import kotlinx.serialization.Serializable
@@ -70,6 +71,8 @@ data class Progress(
     val unlimitedHearts: Boolean = false,
     /** Day [unlimitedHearts] was bought, so it lasts through that day even before a lesson. */
     val unlimitedSince: Long = -1,
+    /** Hour of the daily reminder (0–23), or null for none. Android only. */
+    val reminderHour: Int? = null,
 ) {
     /** Bought unlimited hearts last only while the streak is unbroken. */
     fun ownsUnlimitedHearts(today: Long): Boolean =
@@ -194,6 +197,11 @@ class ProgressStore {
     fun recordAnswer(skill: String, correct: Boolean) = update { it.recordAnswer(skill, correct, todayEpochDay()) }
 
     fun setDailyGoal(xp: Int) = update { it.copy(dailyGoal = xp) }
+
+    fun setReminder(hour: Int?) {
+        update { it.copy(reminderHour = hour) }
+        scheduleReminder(hour)
+    }
 
     /** Start over: everything is forgotten except the daily goal. */
     fun reset() = update { Progress(dailyGoal = it.dailyGoal) }

@@ -1,6 +1,7 @@
 package app.iqra
 
 import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,12 +15,17 @@ class MainActivity : ComponentActivity() {
         micResult = null
     }
 
+    private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appContext = applicationContext
         requestMicPermission = { onResult ->
             micResult = onResult
             micPermission.launch(Manifest.permission.RECORD_AUDIO)
+        }
+        requestNotificationPermission = {
+            if (Build.VERSION.SDK_INT >= 33) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         enableEdgeToEdge()
         setContent { App() }
@@ -34,5 +40,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         requestMicPermission = null
+        requestNotificationPermission = null
     }
 }

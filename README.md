@@ -77,6 +77,14 @@ recited is highlighted and kept in view; tap any ayah to play from there. For me
 choose a range of ayat, how many times each ayah repeats (1, 3, 5, 10) and how many times the
 range loops (once, 3×, until stopped). The basmala above each surah is Tanzil's, as written.
 
+**Badges** (trophy on the home screen) — 17 milestones: first lesson, 3/7/30-day streaks,
+100/500/1000 XP, all letters met, all letters strong, vowels, reading rules, reading words,
+first exam, Al-Fātiḥah by heart, 1/5/all surahs memorised. They are worked out from progress,
+so nothing extra is saved; new ones are celebrated on the results screen.
+
+**Daily reminder** (Settings, Android only) — off, 8:00, 13:00, 18:00 or 21:00; only shown if
+you haven't practised yet that day, and set again after the phone restarts.
+
 Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, daily XP goal (10/20/30/50,
 set in Settings), 5 hearts (lose one per mistake, refill one every 20 minutes), wrong answers
 come back at the end of the lesson, lessons unlock in order, completed lessons can be reviewed.
@@ -191,6 +199,7 @@ composeApp/src/
     ui/                    Home, Lesson, Result, Settings, About, Reader screens; theme
     engine/RepeatPlan.kt   what the reader plays next (repeat each ayah, loop a range)
     engine/Tracing.kt      scores a traced letter
+    engine/Badges.kt       milestones, worked out from progress
     Platform.kt            expect: storage, audio, date, back button
   androidMain/             MediaPlayer audio, files dir storage, MainActivity
   desktopMain/             JLayer MP3 audio, %APPDATA% storage, window

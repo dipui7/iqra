@@ -38,3 +38,9 @@ expect fun startRecording(onStarted: (Boolean) -> Unit)
 
 /** Stop recording and return what was heard (at most ~15 s), or null if nothing was recorded. */
 expect fun stopRecording(): app.iqra.engine.Pcm?
+
+/** Whether this platform can show a daily reminder notification (Android yes, desktop no). */
+expect val remindersSupported: Boolean
+
+/** Remind the learner every day at [hour] (0–23, local time), or stop reminding with null. */
+expect fun scheduleReminder(hour: Int?)

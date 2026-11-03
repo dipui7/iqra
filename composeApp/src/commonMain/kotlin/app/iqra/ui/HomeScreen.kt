@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Info
@@ -76,6 +77,7 @@ fun HomeScreen(
     quranTab: @Composable () -> Unit = {},
     track: Track = Track.Reading,
     onTrackChange: (Track) -> Unit = {},
+    onBadges: () -> Unit = {},
 ) {
     var noHearts by remember { mutableStateOf(false) }
     val today = todayEpochDay()
@@ -89,7 +91,7 @@ fun HomeScreen(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { Header(progress, onAbout, onSettings, onSupport) }
+        item { Header(progress, onAbout, onSettings, onSupport, onBadges) }
         item { CoinsCard(progress, today, onBuyUnlimited) }
         nextExam(progress)?.let { (unit, exam) -> item { NextExamCard(unit, exam.title) { start(exam.id) } } }
         if (progress.skills.isNotEmpty()) item { PracticeCard(progress.dueCount(today), progress.hearts < MAX_HEARTS, onPractice) }
@@ -142,13 +144,14 @@ fun HomeScreen(
 }
 
 @Composable
-private fun Header(progress: Progress, onAbout: () -> Unit, onSettings: () -> Unit, onSupport: () -> Unit) {
+private fun Header(progress: Progress, onAbout: () -> Unit, onSettings: () -> Unit, onSupport: () -> Unit, onBadges: () -> Unit) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Iqra", style = MaterialTheme.typography.displaySmall, color = palette.text)
                 Text("Learn to read the Quran, letter by letter", color = palette.secondary)
             }
+            IconButton(onClick = onBadges) { Icon(Icons.Rounded.EmojiEvents, "Badges", tint = palette.streak) }
             IconButton(onClick = onSupport) { Icon(Icons.Rounded.VolunteerActivism, "Help people in need", tint = palette.secondary) }
             IconButton(onClick = onAbout) { Icon(Icons.Rounded.Info, "Sources and licences", tint = palette.secondary) }
             IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = palette.secondary) }

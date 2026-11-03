@@ -29,7 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ResultScreen(result: LessonResult, streak: Int, onContinue: () -> Unit) {
+fun ResultScreen(result: LessonResult, streak: Int, newBadges: Set<String> = emptySet(), onContinue: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.weight(1f))
         val tint = if (result.passed) palette.accent else palette.heart
@@ -71,6 +71,7 @@ fun ResultScreen(result: LessonResult, streak: Int, onContinue: () -> Unit) {
                 else ResultStat("$streak", if (streak == 1) "Day streak" else "Days streak", palette.streak, Modifier.weight(1f))
             }
         }
+        NewBadges(newBadges)
         Spacer(Modifier.weight(1f))
         PrimaryButton("Continue", onClick = onContinue)
     }

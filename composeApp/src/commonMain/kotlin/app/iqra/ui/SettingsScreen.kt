@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import app.iqra.engine.DAILY_GOALS
 import app.iqra.data.Letters
 import app.iqra.engine.ProgressStore
+import app.iqra.remindersSupported
 import app.iqra.engine.Skills
 
 private fun goalName(xp: Int) = when (xp) {
@@ -79,6 +80,30 @@ fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
             "A lesson gives 10 XP, or 15 with no mistakes.",
             style = MaterialTheme.typography.bodySmall, color = palette.secondary, modifier = Modifier.padding(start = 16.dp, top = 6.dp),
         )
+
+        if (remindersSupported) {
+            SectionLabel("DAILY REMINDER")
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(palette.card).padding(horizontal = 12.dp, vertical = 10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf<Int?>(null, 8, 13, 18, 21).forEach { hour ->
+                        val on = progress.reminderHour == hour
+                        Text(
+                            if (hour == null) "Off" else "$hour:00",
+                            color = if (on) palette.onAccent else palette.text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                                .background(if (on) palette.accent else palette.background)
+                                .clickable { store.setReminder(hour) }
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        )
+                    }
+                }
+                Text(
+                    "Only if you haven't practised yet that day.",
+                    style = MaterialTheme.typography.bodySmall, color = palette.secondary, modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+        }
 
         SectionLabel("YOUR PROGRESS")
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(palette.card).padding(16.dp)) {

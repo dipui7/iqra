@@ -30,6 +30,8 @@ import app.iqra.ui.HomeScreen
 import app.iqra.ui.IqraTheme
 import app.iqra.ui.LessonResult
 import app.iqra.ui.LessonScreen
+import app.iqra.engine.Badges
+import app.iqra.ui.BadgesScreen
 import app.iqra.ui.ReaderScreen
 import app.iqra.ui.ResultScreen
 import app.iqra.ui.SurahList
@@ -48,6 +50,7 @@ private sealed interface Screen {
     data class Lesson(val id: String, val attempt: Int) : Screen
     data class Practice(val attempt: Int) : Screen
     data class Reader(val surah: Int) : Screen
+    data object Badges : Screen
     data class Result(val result: LessonResult) : Screen
 }
 
@@ -69,6 +72,8 @@ fun App() {
         var screen by remember { mutableStateOf<Screen>(Screen.Home) }
         // Kept here so coming back from a lesson or the reader returns to the same tab.
         var homeTab by remember { mutableStateOf(Track.Reading) }
+        // Badges held when the last lesson started, to celebrate new ones on the results screen.
+        var badgesBefore by remember { mutableStateOf(Badges.earned(store.progress)) }
         var attempts by remember { mutableStateOf(0) }
 
         // Hearts refill over time; check twice a minute while the app is open.
@@ -104,10 +109,12 @@ fun App() {
                     quranTab = { SurahList(q) { screen = Screen.Reader(it) } },
                     track = homeTab,
                     onTrackChange = { homeTab = it },
+                    onBadges = { screen = Screen.Badges },
                     onBuyUnlimited = store::buyUnlimitedHearts,
                 )
                 Screen.About -> AboutScreen(onBack = { screen = Screen.Home })
                 is Screen.Reader -> ReaderScreen(q, s.surah, onBack = { screen = Screen.Home })
+                Screen.Badges -> BadgesScreen(store.progress, onBack = { screen = Screen.Home })
                 Screen.Support -> SupportScreen(onBack = { screen = Screen.Home })
                 Screen.Settings -> SettingsScreen(store, onBack = { screen = Screen.Home })
                 is Screen.Lesson -> {
@@ -141,7 +148,8 @@ fun App() {
                 is Screen.Result -> ResultScreen(
                     result = s.result,
                     streak = store.progress.streak,
-                    onContinue = { screen = Screen.Home },
+                    onContinue = { badgesBefore = Badges.earned(store.progress); screen = Screen.Home },
+                    newBadges = remember(s) { Badges.earned(store.progress) - badgesBefore },
                 )
             }
         }

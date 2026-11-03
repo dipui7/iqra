@@ -151,3 +151,9 @@ actual fun stopAudio() {
 actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
     // Desktop has no system back button; the close button in the UI is used instead.
 }
+
+actual val remindersSupported: Boolean = false
+
+actual fun scheduleReminder(hour: Int?) {
+    // The desktop app has no notifications; the setting isn't shown there.
+}

@@ -55,6 +55,7 @@ import androidx.compose.material.icons.rounded.VolunteerActivism
 import app.iqra.data.Course
 import app.iqra.data.CourseUnit
 import app.iqra.data.Exams
+import app.iqra.data.Lesson
 import app.iqra.data.Track
 import app.iqra.engine.MAX_HEARTS
 import app.iqra.engine.UNLIMITED_HEARTS_PRICE
@@ -87,6 +88,7 @@ fun HomeScreen(
     ) {
         item { Header(progress, onAbout, onSettings, onSupport) }
         item { CoinsCard(progress, today, onBuyUnlimited) }
+        nextExam(progress)?.let { (unit, exam) -> item { NextExamCard(unit, exam.title) { start(exam.id) } } }
         if (progress.skills.isNotEmpty()) item { PracticeCard(progress.dueCount(today), progress.hearts < MAX_HEARTS, onPractice) }
         item { TrackSwitch(track) { track = it } }
         if (track == Track.Hifz) {
@@ -226,6 +228,33 @@ private fun PracticeCard(due: Int, canEarnHeart: Boolean, onPractice: () -> Unit
     }
 }
 
+/** The first exam not passed yet, reading track first, with the unit it ends. */
+private fun nextExam(progress: Progress): Pair<CourseUnit, Lesson>? =
+    (Course.units + Course.hifzUnits).flatMap { u -> u.lessons.filter { Exams.isExam(it.id) }.map { u to it } }
+        .firstOrNull { (_, l) -> l.id !in progress.passedExams && Course.isUnlocked(l.id, progress.completed) }
+
+@Composable
+private fun NextExamCard(unit: CourseUnit, title: String, onStart: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card).clickable(onClick = onStart)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(palette.streak), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Stars, null, tint = palette.onAccent, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = palette.text)
+            Text(
+                "Next exam · after ${if (unit.track == Track.Reading) "Unit ${unit.id.drop(1)}" else unit.title} · earns a coin",
+                style = MaterialTheme.typography.bodyMedium, color = palette.secondary,
+            )
+        }
+        Icon(Icons.Rounded.PlayArrow, "Start exam", tint = palette.streak)
+    }
+}
+
 /** Coins from exams, and unlocking unlimited hearts with them. */
 @Composable
 private fun CoinsCard(progress: Progress, today: Long, onBuy: () -> Unit) {
@@ -311,15 +340,17 @@ private fun UnitCard(unit: CourseUnit, progress: Progress, onStart: (String) -> 
             if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = palette.separator)
             val completed = lesson.id in progress.completed
             val unlocked = Course.isUnlocked(lesson.id, progress.completed)
-            LessonRow(lesson.title, completed, unlocked) { onStart(lesson.id) }
+            LessonRow(lesson.title, completed, unlocked, exam = Exams.isExam(lesson.id)) { onStart(lesson.id) }
         }
         Spacer(Modifier.height(6.dp))
     }
 }
 
 @Composable
-private fun LessonRow(title: String, completed: Boolean, unlocked: Boolean, onClick: () -> Unit) {
+private fun LessonRow(title: String, completed: Boolean, unlocked: Boolean, exam: Boolean = false, onClick: () -> Unit) {
     val (icon, bg, fg) = when {
+        // Exams stand out: a star in the coin colour.
+        exam && unlocked -> Triple(if (completed) Icons.Rounded.Check else Icons.Rounded.Stars, palette.streak, palette.onAccent)
         completed -> Triple(Icons.Rounded.Check, palette.accent, palette.onAccent)
         unlocked -> Triple(Icons.Rounded.PlayArrow, palette.accentSoft, palette.accent)
         else -> Triple(Icons.Rounded.Lock, palette.separator, palette.secondary)
@@ -332,7 +363,15 @@ private fun LessonRow(title: String, completed: Boolean, unlocked: Boolean, onCl
             Icon(icon, null, tint = fg, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
-        Text(title, style = MaterialTheme.typography.bodyLarge, color = if (unlocked) palette.text else palette.secondary, modifier = Modifier.weight(1f))
-        if (completed) Text("Review", style = MaterialTheme.typography.bodyMedium, color = palette.secondary)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = if (unlocked) palette.text else palette.secondary)
+            if (exam) {
+                Text(
+                    if (completed) "Passed" else "Pass to earn a coin",
+                    style = MaterialTheme.typography.bodySmall, color = palette.streak,
+                )
+            }
+        }
+        if (completed) Text(if (exam) "Retake" else "Review", style = MaterialTheme.typography.bodyMedium, color = palette.secondary)
     }
 }

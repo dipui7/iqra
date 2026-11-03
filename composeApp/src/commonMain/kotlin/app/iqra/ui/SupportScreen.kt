@@ -38,10 +38,6 @@ private data class Organisation(val name: String, val about: String, val link: S
  */
 private val organisations = listOf(
     Organisation(
-        "UNRWA", "UN agency for Palestine refugees: food, shelter, health care and schools in Gaza.",
-        "https://www.unrwa.org", setOf(Region.Gaza),
-    ),
-    Organisation(
         "Medical Aid for Palestinians (MAP)", "Health and medical care for Palestinians, including in Gaza.",
         "https://www.map.org.uk", setOf(Region.Gaza),
     ),
@@ -62,20 +58,8 @@ private val organisations = listOf(
         "https://www.icrc.org", setOf(Region.Gaza, Region.Sudan, Region.Congo),
     ),
     Organisation(
-        "UNICEF", "Nutrition, health, water and protection for children.",
-        "https://www.unicef.org", setOf(Region.Gaza, Region.Sudan, Region.Congo),
-    ),
-    Organisation(
-        "World Food Programme (WFP)", "Emergency food for families facing hunger.",
-        "https://www.wfp.org", setOf(Region.Gaza, Region.Sudan, Region.Congo),
-    ),
-    Organisation(
         "Save the Children", "Health, food, education and protection for children in crises.",
         "https://www.savethechildren.net", setOf(Region.Gaza, Region.Sudan, Region.Congo),
-    ),
-    Organisation(
-        "UNHCR, the UN Refugee Agency", "Shelter and protection for people forced to flee their homes.",
-        "https://www.unhcr.org", setOf(Region.Sudan, Region.Congo),
     ),
     Organisation(
         "International Rescue Committee (IRC)", "Health care, shelter and protection for people hit by conflict.",

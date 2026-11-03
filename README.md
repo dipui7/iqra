@@ -12,9 +12,12 @@ and a **Windows desktop app** (Compose Multiplatform).
   A quick store search found no app called AlifUp; a proper trademark search is still to do.
 - **Package ID:** `app.alifup` (Android). The Kotlin code keeps the package `app.iqra`, which
   users never see.
-- **Logo:** an Alif standing on three rising steps, with a small amber spark. The Alif is the
-  real glyph from the Amiri Quran font (SIL OFL). Drawn by `tools/icon/make_icon.py`, which
-  writes the Android adaptive icon, the in-app icon and `composeApp/icon.png` / `icon.ico`.
+- **Logo:** the first four letters ا ب ت ث climbing from right to left (Arabic order), each
+  bigger and higher than the last on a small platform, like game levels. The Alif and the
+  letters' dots are amber (the dots are what tell ب ت ث apart), the letters go from light to
+  deep green, with two sparkles at the top. The letters are the real glyphs of the Amiri Quran
+  font (SIL OFL). Drawn by `tools/icon/make_icon.py` (needs Pillow and fontTools), which writes
+  the Android adaptive icon, the in-app icon and `composeApp/icon.png` / `icon.ico`.
 - **Colours:** warm ivory `#F8F4EC`, cream cards `#FFFDF8`, light sage `#B3DCC3` for filled
   shapes, deeper sage `#4A8F69` for text and icons, amber `#E39A3B` for streaks and coins.
 

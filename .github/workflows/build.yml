@@ -1,0 +1,55 @@
+name: Build
+
+# Builds the Android app and runs the desktop tests (including the screenshot renderer and the
+# EveryAyah download check, which need a normal machine with internet). The APK, screenshots
+# and test reports are kept as downloadable artifacts for 30 days.
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Android APK
+        run: bash ./gradlew :composeApp:assembleDebug --stacktrace
+
+      - name: Desktop tests and screenshots
+        if: always()
+        run: bash ./gradlew :composeApp:desktopTest --continue
+
+      - name: Upload APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alifup-debug-apk
+          path: composeApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: composeApp/build/screens/
+          if-no-files-found: warn
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: composeApp/build/reports/tests/
+          if-no-files-found: warn

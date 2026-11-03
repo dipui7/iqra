@@ -228,6 +228,17 @@ into `composeApp/build/screens/`):
 ./gradlew :composeApp:desktopTest
 ```
 
+## Tools and documents
+
+| What | Where | Make it again with |
+|---|---|---|
+| Printable workbook (40 pages) | `docs/AlifUp-Workbook.pdf` | `python3 tools/workbook/make_workbook.py` |
+| Teacher review sheet | `docs/teacher-review.pdf` | `python3 tools/review/make_review_sheet.py` then `node tools/review/to_pdf.js` |
+| Download page, privacy policy | `docs/index.html`, `docs/privacy.html` | (GitHub Pages: Settings → Pages → `main`, `/docs`) |
+| Store listing (F-Droid / IzzyOnDroid) | `fastlane/metadata/android/en-US/` | edit the text files |
+| Release steps, signing key | `docs/RELEASING.md` | |
+| CI: Android APK, tests, screenshots | `.github/workflows/build.yml` | runs on every push |
+
 ## Code map
 
 ```

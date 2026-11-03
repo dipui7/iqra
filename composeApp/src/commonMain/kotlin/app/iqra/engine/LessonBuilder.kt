@@ -206,8 +206,9 @@ class LessonBuilder(
             prompt = prompt,
             big = big,
             bigArabic = bigArabic,
+            bigSound = if (big != null && bigArabic) audio.name(letter) else null,
             caption = caption,
-            options = choices.map(label),
+            options = choices.map { label(it).copy(sound = audio.name(it)) },
             correct = choices.indexOf(letter),
             // A listening question plays its clip straight away; any other question offers the
             // letter's name after it is answered, so every answer is also heard.

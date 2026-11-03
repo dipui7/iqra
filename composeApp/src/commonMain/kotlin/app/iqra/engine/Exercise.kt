@@ -4,7 +4,8 @@ import app.iqra.data.AyahRef
 import app.iqra.data.Letter
 import app.iqra.data.Sound
 
-data class Option(val label: String, val arabic: Boolean)
+/** An answer button. [sound] (e.g. the letter's name) can be played by tapping it once answered. */
+data class Option(val label: String, val arabic: Boolean, val sound: Sound? = null)
 
 /** A letter with a vowel mark, e.g. بَ read "ba", and its recording if there is one. */
 data class Syllable(val arabic: String, val latin: String, val sound: Sound? = null)
@@ -29,6 +30,8 @@ sealed interface Exercise {
         val correct: Int,
         val big: String? = null,
         val bigArabic: Boolean = true,
+        /** Played when the [big] text is tapped, once answered (before, it would give the answer away). */
+        val bigSound: Sound? = null,
         val caption: String? = null,
         val audio: Sound? = null,
         /** Play [audio] as soon as the question appears (listening questions). */

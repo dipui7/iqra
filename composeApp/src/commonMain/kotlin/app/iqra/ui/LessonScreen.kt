@@ -173,9 +173,11 @@ private fun TopBar(session: LessonSession, onClose: () -> Unit) {
 @Composable
 private fun LetterIntro(intro: Exercise.LetterIntro) {
     val letter = intro.letter
+    val name = rememberSoundPlayer(intro.name)
+    val tapToHear = if (name != null) Modifier.clickable { name.toggle() } else Modifier
     Label("NEW LETTER")
     Card {
-        Text(letter.char, style = arabicStyle(110, lineFactor = 1.4), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(letter.char, style = arabicStyle(110, lineFactor = 1.4), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().then(tapToHear))
         Text(letter.name, style = MaterialTheme.typography.titleLarge, color = palette.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Text(letter.hint, color = palette.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
     }
@@ -196,7 +198,7 @@ private fun LetterIntro(intro: Exercise.LetterIntro) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         forms.forEach { (label, form) ->
             Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(palette.card).padding(vertical = 6.dp),
+                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(palette.card).then(tapToHear).padding(vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(form, style = arabicStyle(34))
@@ -265,9 +267,20 @@ private fun AyahIntro(intro: Exercise.AyahIntro) {
 private fun ChoiceQuestion(q: Exercise.Choice, session: LessonSession) {
     Text(q.prompt, style = MaterialTheme.typography.titleLarge, color = palette.text, modifier = Modifier.padding(vertical = 12.dp))
     if (q.big != null) {
+        val bigPlayer = rememberSoundPlayer(q.bigSound)
+        val answered = session.feedback != null
         Card {
             if (q.bigArabic) {
-                Text(q.big, style = arabicStyle(if (q.big.length <= 3) 96 else 48).copy(textDirection = TextDirection.Rtl), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                if (bigPlayer != null && answered) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        Icon(
+                            if (bigPlayer.playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp,
+                            "Tap the letter to hear it", tint = palette.accent, modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                Text(q.big, style = arabicStyle(if (q.big.length <= 3) 96 else 48).copy(textDirection = TextDirection.Rtl), textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().then(if (bigPlayer != null && answered) Modifier.clickable { bigPlayer.toggle() } else Modifier))
             } else {
                 Text(q.big, style = MaterialTheme.typography.titleLarge, color = palette.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp))
             }
@@ -310,6 +323,7 @@ private fun ChoiceQuestion(q: Exercise.Choice, session: LessonSession) {
 private fun OptionCard(option: Option, i: Int, q: Exercise.Choice, session: LessonSession, modifier: Modifier) {
     val fb = session.feedback
     val selected = session.selected == i
+    val player = rememberSoundPlayer(option.sound)
     val border = when {
         fb != null && i == q.correct -> palette.correct
         fb is Feedback.Wrong && selected -> palette.wrong
@@ -327,7 +341,8 @@ private fun OptionCard(option: Option, i: Int, q: Exercise.Choice, session: Less
             .clip(RoundedCornerShape(16.dp))
             .background(bg)
             .border(BorderStroke(2.dp, border), RoundedCornerShape(16.dp))
-            .clickable(enabled = fb == null) { session.selected = i }
+            // Before answering a tap selects; afterwards it plays the option (e.g. the letter's name).
+            .clickable(enabled = fb == null || player != null) { if (fb == null) session.selected = i else player?.toggle() }
             .heightIn(min = 60.dp)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
@@ -341,6 +356,12 @@ private fun OptionCard(option: Option, i: Int, q: Exercise.Choice, session: Less
             Text(option.label, style = arabicStyle(size).copy(textDirection = TextDirection.Rtl), textAlign = TextAlign.Center)
         } else {
             Text(option.label, style = MaterialTheme.typography.bodyLarge, color = palette.text, textAlign = TextAlign.Center)
+        }
+        if (fb != null && player != null) {
+            Icon(
+                if (player.playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Play",
+                tint = palette.accent, modifier = Modifier.align(Alignment.TopEnd).size(16.dp),
+            )
         }
     }
 }

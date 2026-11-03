@@ -50,6 +50,9 @@ data class CourseUnit(
 /** An ayah that consists only of opening letters, with the letters it is made of. */
 data class Opening(val ref: AyahRef, val letters: List<Letter>)
 
+/** While the app is in development every lesson is open. Set to false to unlock in order again. */
+const val UNLOCK_ALL = true
+
 object Course {
     private fun letterUnit(n: Int, title: String, vararg letters: Letter) = CourseUnit(
         id = "u$n",
@@ -168,7 +171,7 @@ object Course {
      * personal (many learners already know some surahs), so every surah is open.
      */
     fun isUnlocked(lessonId: String, completed: Set<String>): Boolean {
-        if (unitOf(lessonId).track == Track.Hifz) return true
+        if (UNLOCK_ALL || unitOf(lessonId).track == Track.Hifz) return true
         return units.flatMap { it.lessons }.takeWhile { it.id != lessonId }.all { it.id in completed }
     }
 

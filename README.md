@@ -29,6 +29,8 @@ and a **Windows desktop app** (Compose Multiplatform).
 - **Recitation — [EveryAyah](https://everyayah.com)** (Mishary Rashid Alafasy, 128 kbps).
   EveryAyah publishes no licence, so the app streams from their URLs instead of redistributing
   files. Before a public release, get permission or switch to a source with explicit terms.
+- **Letter names — [arabic-alphabet-audio](https://github.com/razunatmohammed88-cyber/arabic-alphabet-audio)**,
+  MIT License (`licenses/letter-audio-MIT.txt`).
 - **Font — [Amiri Quran](https://github.com/aliftype/amiri)**, SIL Open Font License 1.1
   (`licenses/AmiriQuran-OFL.txt`).
 - **Lesson text** (letter names, hints, transliterations) is written for this app and is not
@@ -41,10 +43,8 @@ All of this is also shown in the app (ⓘ on the home screen).
 14 units, 40 lessons:
 
 1–7. **The 28 letters** in groups of 3–5 (similar shapes together). Each unit has:
-   - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, buttons to hear
-     its name and its sound, and for 14 letters the ayah where its name is recited in the
-     Quran, labelled with exactly what is heard, e.g. "Alif · Lām · Mīm (2:1)"), then
-     recognition and listening questions.
+   - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, a button to
+     hear its name), then recognition and listening questions.
    - *Practice* — name ↔ letter, sound → letter, start-of-word shape → letter, match pairs.
    - *Find them in the Quran* — "which word contains Ba?" and "does this word contain Ta?" using
      real words from Al-Fātiḥah and Juz ʿAmma, with the ayah's audio.
@@ -95,8 +95,12 @@ The app uses whatever is there: letter cards get "Its name" / "Its sound" button
 add listening questions ("Listen. Which letter makes this sound?", "Which did you hear?").
 Missing clips are simply not offered — the app never plays a whole ayah as if it were a letter.
 
-**The recordings are not in the repo yet.** No openly licensed set could be downloaded from the
-build machine. To make them, record four takes (names, then fatḥa, kasra, ḍamma — a pause
+**Letter names: bundled** — 28 recordings published under the MIT License by
+[razunatmohammed88-cyber](https://github.com/razunatmohammed88-cyber/arabic-alphabet-audio)
+(licence in `licenses/letter-audio-MIT.txt`, details in `files/letters/CREDITS.md`).
+
+**Syllables (ba, bi, bu …): not recorded yet**, so "Its sound" buttons and sound-listening
+questions don't appear. To make them, record three takes (fatḥa, kasra, ḍamma — a pause
 between items) with a teacher or a clear reciter, and split them:
 
 ```bash
@@ -104,7 +108,7 @@ python3 tools/letter-audio/make_clips.py script
 ```
 
 ```bash
-python3 tools/letter-audio/make_clips.py split names names.m4a
+python3 tools/letter-audio/make_clips.py split a fatha.m4a
 ```
 
 See `tools/letter-audio/make_clips.py` for details. Credit the reciter in
@@ -163,8 +167,8 @@ composeApp/src/
 
 Roughly in order of value:
 
-1. **Letter sounds audio.** The app is ready for per-letter clips (see *Letter sounds*);
-   the recordings themselves still need to be made or licensed.
+1. **Syllable audio.** Letter names are recorded; ba/bi/bu syllables still need recording
+   (see *Letter sounds*).
 2. **More reading:** ~~sukūn, shadda, tanwīn, long vowels~~ (done); next: hamza forms, the
    silent letters of the Uthmani script, reading short ayat with word-by-word highlighting.
 3. **Hifz (memorisation) track** — ~~ordering, next word, listen-and-continue~~ (done for 21

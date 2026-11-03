@@ -54,7 +54,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import app.iqra.data.Letters
 import app.iqra.data.Sound
 import app.iqra.engine.Exercise
 import app.iqra.engine.Feedback
@@ -204,12 +203,6 @@ private fun LetterIntro(intro: Exercise.LetterIntro) {
                 Text(label, style = MaterialTheme.typography.bodySmall, color = palette.secondary)
             }
         }
-    }
-    letter.quranExample?.let { ref ->
-        // The whole ayah plays, so say exactly what will be heard: this is the letter's name
-        // inside real recitation, not the letter's sound on its own.
-        Label("HEAR ITS NAME IN THE QURAN")
-        AudioButton(Sound.Ayah(ref), "${Letters.quranExampleRecited[ref] ?: "Ayah"} ($ref)")
     }
 }
 

@@ -39,6 +39,12 @@ private val sources = listOf(
         "https://everyayah.com",
     ),
     Source(
+        "Letter names — recordings",
+        "The spoken letter names are recordings published by razunatmohammed88-cyber on GitHub under the MIT " +
+            "License (Copyright © 2025 razunatmohammed88-cyber), trimmed and volume-matched for this app.",
+        "https://github.com/razunatmohammed88-cyber/arabic-alphabet-audio",
+    ),
+    Source(
         "Font — Amiri Quran",
         "Copyright © 2010-2022 The Amiri Quran Project Authors. SIL Open Font License 1.1.",
         "https://github.com/aliftype/amiri",

@@ -52,9 +52,11 @@ private fun schedule(context: Context, hour: Int?) {
     alarms.setInexactRepeating(AlarmManager.RTC_WAKEUP, next.timeInMillis, AlarmManager.INTERVAL_DAY, intent)
 }
 
+private val json = Json { ignoreUnknownKeys = true }
+
 private fun savedProgress(context: Context): Progress? = runCatching {
     val text = java.io.File(context.filesDir, "progress.json").readText()
-    Json { ignoreUnknownKeys = true }.decodeFromString(Progress.serializer(), text)
+    json.decodeFromString(Progress.serializer(), text)
 }.getOrNull()
 
 /** Shows the daily reminder, unless the learner has already practised today. */

@@ -47,6 +47,12 @@ compose.resources {
     publicResClass = false
 }
 
+// Release signing key, kept out of git: copy keystore.properties.example to keystore.properties
+// and fill it in (see docs/RELEASING.md). Without it, release builds are simply unsigned.
+val keystoreProperties = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->
+    java.util.Properties().apply { file.inputStream().use { load(it) } }
+}
+
 android {
     namespace = "app.iqra"
     compileSdk = 35

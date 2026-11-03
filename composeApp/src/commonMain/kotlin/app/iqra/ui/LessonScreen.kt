@@ -1,6 +1,7 @@
 package app.iqra.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -542,7 +543,9 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
         null -> palette.background
     }
     Column(Modifier.fillMaxWidth().background(bg).padding(20.dp)) {
-        AnimatedVisibility(visible = fb != null, enter = slideInVertically { it / 2 }) {
+        // No exit animation: the feedback is already cleared while it would slide out, so it
+        // would flash "Not quite" in red for a moment.
+        AnimatedVisibility(visible = fb != null, enter = slideInVertically { it / 2 }, exit = ExitTransition.None) {
             Column(Modifier.padding(bottom = 14.dp)) {
                 val good = fb == Feedback.Correct
                 Row(verticalAlignment = Alignment.CenterVertically) {

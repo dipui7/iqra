@@ -3,10 +3,13 @@ package app.iqra
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
 import app.iqra.data.Course
 import app.iqra.data.QuranText
@@ -77,7 +80,13 @@ class ScreenshotTest {
         lessonShot("hifz-next-word", b.build(Course.lesson("h1-recall")).first { it is Exercise.Choice && it.prompt == "Which word comes next?" })
         shot("settings") { app.iqra.ui.SettingsScreen(ProgressStore()) {} }
         lessonShot("trace", learn.first { it is Exercise.Trace })
-        shot("reader") { app.iqra.ui.ReaderScreen(quran, 112) {} }
+        val meta = app.iqra.data.QuranMeta.parse(File("src/commonMain/composeResources/files/quran_metadata.xml").readText())
+        shot("reader") { app.iqra.ui.ReaderScreen(quran, meta.surah(112)) {} }
+        shot("surah-list") {
+            androidx.compose.foundation.layout.Column(
+                Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 20.dp),
+            ) { app.iqra.ui.SurahList(meta) {} }
+        }
         shot("result") { ResultScreen(LessonResult("Meet the letters", true, 15, 92), 3) {} }
         shot("home-coins") { HomeScreen(progress.copy(coins = 3), {}, {}) }
         shot("support") { app.iqra.ui.SupportScreen {} }

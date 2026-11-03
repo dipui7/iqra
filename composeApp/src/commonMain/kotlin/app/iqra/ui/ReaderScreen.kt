@@ -44,7 +44,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import app.iqra.data.AyahRef
-import app.iqra.data.JuzAmma
+import app.iqra.data.QuranMeta
+import app.iqra.data.SurahInfo
 import app.iqra.data.QuranText
 import app.iqra.data.arabicDigits
 import app.iqra.engine.RepeatPlan
@@ -54,22 +55,33 @@ import app.iqra.stopAudio
 
 /** The list of surahs to open in the reader (the "Quran" tab on the home screen). */
 @Composable
-fun SurahList(quran: QuranText, onOpen: (Int) -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)) {
-        JuzAmma.surahs.forEachIndexed { i, n ->
-            if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = palette.separator)
-            Row(
-                Modifier.fillMaxWidth().clickable { onOpen(n) }.padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AyahNumber(n, highlighted = false)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(JuzAmma.names[n] ?: "Surah $n", style = MaterialTheme.typography.bodyLarge, color = palette.text)
-                    Text("${quran.surah(n).size} ayat", style = MaterialTheme.typography.bodySmall, color = palette.secondary)
+fun SurahList(meta: QuranMeta, onOpen: (Int) -> Unit) {
+    // All 114 surahs, under the juz each one starts in.
+    meta.surahs.groupBy { meta.juzOf(it.number) }.forEach { (juz, surahs) ->
+        Text(
+            "JUZ $juz",
+            style = MaterialTheme.typography.labelMedium, color = palette.secondary,
+            modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp),
+        )
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card)) {
+            surahs.forEachIndexed { i, s ->
+                if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = palette.separator)
+                Row(
+                    Modifier.fillMaxWidth().clickable { onOpen(s.number) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AyahNumber(s.number, highlighted = false)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(s.name, style = MaterialTheme.typography.bodyLarge, color = palette.text)
+                        Text(
+                            "${s.meaning} · ${s.ayahCount} ayat · ${if (s.meccan) "Meccan" else "Medinan"}",
+                            style = MaterialTheme.typography.bodySmall, color = palette.secondary,
+                        )
+                    }
+                    // The surah's Arabic name from Tanzil's metadata (not Quranic text).
+                    Text(s.arabicName, style = arabicStyle(22, lineFactor = 1.6).copy(color = palette.accent, textDirection = TextDirection.Rtl))
                 }
-                // The surah's Arabic name from the Tanzil file (metadata, not Quranic text).
-                Text(quran.suraName(n), style = arabicStyle(22, lineFactor = 1.6).copy(color = palette.accent, textDirection = TextDirection.Rtl))
             }
         }
     }
@@ -81,7 +93,8 @@ fun SurahList(quran: QuranText, onOpen: (Int) -> Unit) {
  * which is how most people memorise.
  */
 @Composable
-fun ReaderScreen(quran: QuranText, surah: Int, onBack: () -> Unit) {
+fun ReaderScreen(quran: QuranText, info: SurahInfo, onBack: () -> Unit) {
+    val surah = info.number
     val ayat = remember(surah) { quran.surah(surah) }
     val count = ayat.size
     var from by remember { mutableIntStateOf(1) }
@@ -136,7 +149,7 @@ fun ReaderScreen(quran: QuranText, surah: Int, onBack: () -> Unit) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { stop(); onBack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = palette.accent) }
             Column(Modifier.weight(1f)) {
-                Text(JuzAmma.names[surah] ?: "Surah $surah", style = MaterialTheme.typography.titleLarge, color = palette.text)
+                Text(info.name, style = MaterialTheme.typography.titleLarge, color = palette.text)
                 Text("Surah $surah · $count ayat", style = MaterialTheme.typography.bodySmall, color = palette.secondary)
             }
             Text(quran.suraName(surah), style = arabicStyle(24, lineFactor = 1.6).copy(color = palette.accent, textDirection = TextDirection.Rtl))

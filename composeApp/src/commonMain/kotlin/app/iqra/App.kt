@@ -21,6 +21,7 @@ import app.iqra.data.Track
 import app.iqra.data.LetterAudio
 import app.iqra.data.Letters
 import app.iqra.engine.Skills
+import app.iqra.data.QuranMeta
 import app.iqra.data.QuranText
 import app.iqra.engine.LessonBuilder
 import app.iqra.engine.ProgressStore
@@ -62,6 +63,11 @@ fun App() {
                 QuranText.parse(Res.readBytes("files/quran_uthmani.xml").decodeToString())
             }
         }
+        val meta by produceState<QuranMeta?>(null) {
+            value = withContext(Dispatchers.Default) {
+                QuranMeta.parse(Res.readBytes("files/quran_metadata.xml").decodeToString())
+            }
+        }
         // Find out once which letter recordings are bundled; lessons only ask about those.
         val letterAudio by produceState<LetterAudio?>(null) {
             value = withContext(Dispatchers.Default) {
@@ -93,8 +99,9 @@ fun App() {
             Modifier.fillMaxSize().background(palette.background).windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             val q = quran
+            val m = meta
             val audio = letterAudio
-            if (q == null || audio == null) {
+            if (q == null || m == null || audio == null) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center))
                 return@Box
             }
@@ -106,14 +113,14 @@ fun App() {
                     onPractice = { screen = Screen.Practice(++attempts) },
                     onSettings = { screen = Screen.Settings },
                     onSupport = { screen = Screen.Support },
-                    quranTab = { SurahList(q) { screen = Screen.Reader(it) } },
+                    quranTab = { SurahList(m) { screen = Screen.Reader(it) } },
                     track = homeTab,
                     onTrackChange = { homeTab = it },
                     onBadges = { screen = Screen.Badges },
                     onBuyUnlimited = store::buyUnlimitedHearts,
                 )
                 Screen.About -> AboutScreen(onBack = { screen = Screen.Home })
-                is Screen.Reader -> ReaderScreen(q, s.surah, onBack = { screen = Screen.Home })
+                is Screen.Reader -> ReaderScreen(q, m.surah(s.surah), onBack = { screen = Screen.Home })
                 Screen.Badges -> BadgesScreen(store.progress, onBack = { screen = Screen.Home })
                 Screen.Support -> SupportScreen(onBack = { screen = Screen.Home })
                 Screen.Settings -> SettingsScreen(store, onBack = { screen = Screen.Home })

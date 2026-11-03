@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import app.iqra.engine.DAILY_GOALS
 import app.iqra.data.Letters
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import app.iqra.engine.Backup
@@ -65,6 +66,19 @@ fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = palette.accent) }
             Text("Settings", style = MaterialTheme.typography.displaySmall, color = palette.text)
+        }
+
+        SectionLabel("SOUND")
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(palette.card)
+                .clickable { store.setSoundEffects(!progress.soundEffects) }.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Sound effects", style = MaterialTheme.typography.bodyLarge, color = palette.text)
+                Text("Soft sounds for right and wrong answers — no music", style = MaterialTheme.typography.bodySmall, color = palette.secondary)
+            }
+            Switch(checked = progress.soundEffects, onCheckedChange = { store.setSoundEffects(it) })
         }
 
         SectionLabel("DAILY GOAL")

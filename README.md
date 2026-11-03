@@ -124,6 +124,14 @@ range loops (once, 3×, until stopped). The basmala above each surah is Tanzil's
 first exam, Al-Fātiḥah by heart, 1/5/all surahs memorised. They are worked out from progress,
 so nothing extra is saved; new ones are celebrated on the results screen.
 
+**Sounds and encouragement** — soft feedback sounds for right and wrong answers, finishing a
+lesson and earning a badge. They are deliberately **not musical** (a water drop, a soft tap, a
+breath of air), since many Muslims avoid music around the Quran; `tools/sfx/make_sfx.py` makes
+them, and any can be replaced by an MP3 of the same name (e.g. a voice saying "mā shāʾ Allāh").
+Settings → Sound effects turns them off. Right answers also get words of praise
+("Mā shāʾ Allāh!", "Aḥsant!", "Bārak Allāhu fīk!"), a "5 in a row" streak, a light vibration
+on phones, and passing a lesson a short shower of green and gold dots.
+
 **Backup** (Settings) — "Copy backup code" puts all progress on the clipboard as one block of
 text (send it to yourself in any chat); "Restore from a backup code" takes it back on another
 device. Works the same on Android and Windows.

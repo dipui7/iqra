@@ -76,6 +76,8 @@ data class Progress(
     val unlimitedSince: Long = -1,
     /** Hour of the daily reminder (0–23), or null for none. Android only. */
     val reminderHour: Int? = null,
+    /** Play the feedback sounds (correct, wrong, lesson complete …). */
+    val soundEffects: Boolean = true,
     /** Reader settings: colour tajweed rules, and show the English translation under each ayah. */
     val showTajweed: Boolean = true,
     val showTranslation: Boolean = true,
@@ -205,6 +207,8 @@ class ProgressStore {
     fun recordAnswer(skill: String, correct: Boolean) = update { it.recordAnswer(skill, correct, todayEpochDay()) }
 
     fun setDailyGoal(xp: Int) = update { it.copy(dailyGoal = xp) }
+
+    fun setSoundEffects(on: Boolean) = update { it.copy(soundEffects = on) }
 
     fun setShowTajweed(on: Boolean) = update { it.copy(showTajweed = on) }
 

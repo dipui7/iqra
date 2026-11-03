@@ -44,3 +44,6 @@ expect val remindersSupported: Boolean
 
 /** Remind the learner every day at [hour] (0–23, local time), or stop reminding with null. */
 expect fun scheduleReminder(hour: Int?)
+
+/** Play a short sound effect (MP3 bytes) alongside any recitation, without stopping it. */
+expect fun playEffect(bytes: ByteArray)

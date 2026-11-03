@@ -130,3 +130,33 @@ actual fun stopAudio() {
 
 @Composable
 actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) = BackHandler(enabled, onBack)
+
+// Effects being played; kept so they aren't released (or garbage collected) mid-sound.
+private val effects = mutableSetOf<MediaPlayer>()
+
+actual fun playEffect(bytes: ByteArray) {
+    val p = MediaPlayer()
+    effects += p
+    runCatching {
+        p.setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        )
+        p.setDataSource(object : MediaDataSource() {
+            override fun getSize() = bytes.size.toLong()
+            override fun close() {}
+            override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int {
+                if (position >= bytes.size) return -1
+                val n = minOf(size, bytes.size - position.toInt())
+                System.arraycopy(bytes, position.toInt(), buffer, offset, n)
+                return n
+            }
+        })
+        p.setOnPreparedListener { it.start() }
+        p.setOnCompletionListener { it.release(); effects -= it }
+        p.setOnErrorListener { mp, _, _ -> mp.release(); effects -= mp; true }
+        p.prepareAsync()
+    }.onFailure { p.release(); effects -= p }
+}

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -87,6 +88,8 @@ fun App() {
             }
         }
         val store = remember { ProgressStore() }
+        LaunchedEffect(Unit) { Effects.load() }
+        SideEffect { Effects.enabled = store.progress.soundEffects }
         var screen by remember { mutableStateOf<Screen>(Screen.Home) }
         // Kept here so coming back from a lesson or the reader returns to the same tab.
         var homeTab by remember { mutableStateOf(Track.Reading) }

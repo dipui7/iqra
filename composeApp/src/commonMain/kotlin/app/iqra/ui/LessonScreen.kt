@@ -41,6 +41,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
@@ -70,11 +73,18 @@ import app.iqra.engine.PRACTICE_XP
 import app.iqra.engine.ProgressStore
 import app.iqra.playAudio
 import app.iqra.playAudioBytes
+import app.iqra.Effect
+import app.iqra.Effects
 import app.iqra.resources.Res
 import app.iqra.stopAudio
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/** Shown instead of "Correct!": common Muslim words of praise, and plain English. */
+private val PRAISE = listOf(
+    "Correct!", "Mā shāʾ Allāh!", "Aḥsant! Well done", "Bārak Allāhu fīk!", "Excellent!", "Correct!", "Great job!",
+)
 
 data class LessonResult(
     val title: String,
@@ -139,6 +149,25 @@ fun LessonScreen(
         onFinished(LessonResult(title, passed, xp, accuracy, practice, heartGained))
     }
 
+    // Right answers in a row, for "5 in a row".
+    var combo by remember { mutableIntStateOf(0) }
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(session.feedback) {
+        when (session.feedback) {
+            Feedback.Correct -> {
+                combo++
+                Effects.play(Effect.Correct)
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            }
+            is Feedback.Wrong -> {
+                combo = 0
+                Effects.play(Effect.Wrong)
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            null -> Unit
+        }
+    }
+
     LaunchedEffect(session.finished) { if (session.finished) finish(passed = true) }
     // In a matching exercise mistakes don't show a feedback bar, so end the lesson right away.
     LaunchedEffect(session.hearts) {
@@ -172,7 +201,7 @@ fun LessonScreen(
                 }
             }
         }
-        BottomBar(exercise, session, onContinueAfterFeedback = {
+        BottomBar(exercise, session, combo, onContinueAfterFeedback = {
             if (session.outOfHearts) finish(passed = false) else session.next()
         })
     }
@@ -478,12 +507,14 @@ private fun MatchQuestion(q: Exercise.Match, session: LessonSession) {
         val r = pickRight ?: return@LaunchedEffect
         if (q.pairs.contains(l to r)) {
             matched += l
+            if (matched.size < q.pairs.size) Effects.play(Effect.Correct)
             pickLeft = null
             pickRight = null
             if (matched.size == q.pairs.size) session.markSolved(showFeedback = true)
         } else {
             wrong = l to r
             session.registerMistake()
+            Effects.play(Effect.Wrong)
             delay(600)
             wrong = null
             pickLeft = null
@@ -535,8 +566,10 @@ private fun MatchTile(text: String, arabic: Boolean, done: Boolean, picked: Bool
 // --- Bottom bar ------------------------------------------------------------------------
 
 @Composable
-private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfterFeedback: () -> Unit) {
+private fun BottomBar(exercise: Exercise, session: LessonSession, combo: Int, onContinueAfterFeedback: () -> Unit) {
     val fb = session.feedback
+    // A different word of praise now and then, the way a teacher would say it.
+    val praise = remember(session.index, fb) { PRAISE.random() }
     val bg = when (fb) {
         Feedback.Correct -> palette.correctSoft
         is Feedback.Wrong -> palette.wrongSoft
@@ -555,10 +588,20 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (good) "Correct!" else "Not quite",
+                        if (good) praise else "Not quite",
                         style = MaterialTheme.typography.titleLarge,
                         color = if (good) palette.correct else palette.wrong,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
+                    if (good && combo >= 3) {
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "$combo in a row",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = palette.onAccent,
+                            modifier = Modifier.clip(RoundedCornerShape(50)).background(palette.streak).padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
+                    }
                 }
                 if (fb is Feedback.Wrong && fb.answer != null) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {

@@ -161,3 +161,10 @@ actual val remindersSupported: Boolean = false
 actual fun scheduleReminder(hour: Int?) {
     // The desktop app has no notifications; the setting isn't shown there.
 }
+
+actual fun playEffect(bytes: ByteArray) {
+    // Its own player on its own thread, so it never stops a recitation that is playing.
+    thread(isDaemon = true, name = "effect") {
+        runCatching { Player(ByteArrayInputStream(bytes)).play() }
+    }
+}

@@ -76,6 +76,7 @@ class ScreenshotTest {
         lessonShot("hifz-order", hifz.first { it is Exercise.Order })
         lessonShot("hifz-next-word", b.build(Course.lesson("h1-recall")).first { it is Exercise.Choice && it.prompt == "Which word comes next?" })
         shot("settings") { app.iqra.ui.SettingsScreen(ProgressStore()) {} }
+        lessonShot("trace", learn.first { it is Exercise.Trace })
         shot("reader") { app.iqra.ui.ReaderScreen(quran, 112) {} }
         shot("result") { ResultScreen(LessonResult("Meet the letters", true, 15, 92), 3) {} }
         shot("home-coins") { HomeScreen(progress.copy(coins = 3), {}, {}) }

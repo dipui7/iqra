@@ -101,6 +101,7 @@ class LessonBuilder(
         val intros = unit.letters.flatMap { letter ->
             listOfNotNull(
                 Exercise.LetterIntro(letter, name = audio.name(letter), sound = audio.sound(letter)),
+                Exercise.Trace(letter, audio.name(letter)),
                 letterToName(letter, unit),
                 hearSound(letter, unit),
             )

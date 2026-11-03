@@ -68,6 +68,9 @@ sealed interface Exercise {
         val skill: String? = null,
     ) : Exercise
 
+    /** Draw the letter over a faint guide. Costs no hearts: a miss just says how to do better. */
+    data class Trace(val letter: Letter, val name: Sound? = null) : Exercise
+
     /** Tap an Arabic item, then its matching Latin item, until all pairs are matched. */
     data class Match(val prompt: String, val pairs: List<Pair<String, String>>) : Exercise
 }

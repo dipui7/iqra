@@ -166,6 +166,7 @@ fun LessonScreen(
                     is Exercise.AyahIntro -> AyahIntro(exercise)
                     is Exercise.Order -> OrderQuestion(exercise, session)
                     is Exercise.Voice -> VoiceQuestion(exercise, session)
+                    is Exercise.Trace -> TraceQuestion(exercise, session)
                 }
             }
         }
@@ -584,6 +585,7 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
             exercise is Exercise.Match -> PrimaryButton("Match all pairs", enabled = false, onClick = {})
             exercise is Exercise.Order -> PrimaryButton("Check", enabled = session.orderAnswer != null, onClick = session::check)
             exercise is Exercise.Voice -> PrimaryButton("Record your answer above", enabled = false, onClick = {})
+            exercise is Exercise.Trace -> Unit // its Check button is under the drawing
             else -> PrimaryButton("Continue", onClick = { session.markSolved(showFeedback = false) })
         }
     }

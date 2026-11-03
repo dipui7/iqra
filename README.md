@@ -44,7 +44,9 @@ All of this is also shown in the app (ⓘ on the home screen).
 
 1–7. **The 28 letters** in groups of 3–5 (similar shapes together). Each unit has:
    - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, a button to
-     hear its name), then recognition and listening questions.
+     hear its name), **trace the letter** over a grey guide (finger or mouse; scored on a
+     grid: most of the drawing must be on the letter and most of the letter covered; a miss
+     costs no heart and says what to fix), then recognition and listening questions.
    - *Practice* — name ↔ letter, sound → letter, start-of-word shape → letter, match pairs.
    - *Find them in the Quran* — "which word contains Ba?" and "does this word contain Ta?" using
      real words from Al-Fātiḥah and Juz ʿAmma, with the ayah's audio.
@@ -188,6 +190,7 @@ composeApp/src/
     engine/Skills.kt       names of what questions practise (letter:ba, rule:shadda …)
     ui/                    Home, Lesson, Result, Settings, About, Reader screens; theme
     engine/RepeatPlan.kt   what the reader plays next (repeat each ayah, loop a range)
+    engine/Tracing.kt      scores a traced letter
     Platform.kt            expect: storage, audio, date, back button
   androidMain/             MediaPlayer audio, files dir storage, MainActivity
   desktopMain/             JLayer MP3 audio, %APPDATA% storage, window

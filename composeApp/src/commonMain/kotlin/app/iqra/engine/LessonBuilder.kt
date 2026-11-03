@@ -528,10 +528,13 @@ class LessonBuilder(
     // --- Exams ---------------------------------------------------------------------------
 
     /**
-     * An end-of-stage exam of [size] questions: half ordinary quiz questions, a fifth harder
-     * ones, and the rest voice questions, always at least one.
+     * A unit check or stage exam of [size] questions: half ordinary quiz questions, a fifth
+     * harder ones, and the rest voice questions, always at least one.
      */
-    fun exam(examId: String, size: Int = 10): List<Exercise> {
+    fun exam(
+        examId: String,
+        size: Int = if (Exams.isUnitCheck(examId)) Exams.CHECK_SIZE else Exams.STAGE_SIZE,
+    ): List<Exercise> {
         val skills = examSkills(examId)
         val voices = examVoices(examId).shuffled(random)
         val hardCount = (size * 0.2).roundToInt()
@@ -553,11 +556,20 @@ class LessonBuilder(
         return out
     }
 
-    private fun examSkills(examId: String): List<String> = when (examId) {
-        Exams.LETTERS -> Letters.all.map(Skills::letter)
-        Exams.VOWELS -> Harakat.all.map(Skills::vowel)
-        Exams.READING -> Rules.all.map(Skills::rule)
+    private fun examSkills(examId: String): List<String> = when {
+        examId == Exams.LETTERS -> Letters.all.map(Skills::letter)
+        examId == Exams.VOWELS -> Harakat.all.map(Skills::vowel)
+        examId == Exams.READING -> Rules.all.map(Skills::rule)
+        Exams.isUnitCheck(examId) -> unitSkills(Course.unitOf(examId))
         else -> Exams.hifzGroupOf(examId)?.map(Skills::surah) ?: error("Unknown exam $examId")
+    }
+
+    /** What a unit check covers: the unit's letters, rule or surah (or the vowels). */
+    private fun unitSkills(unit: CourseUnit): List<String> = when {
+        unit.letters.isNotEmpty() -> unit.letters.map(Skills::letter)
+        unit.rule != null -> listOf(Skills.rule(unit.rule))
+        unit.surah != null -> listOf(Skills.surah(unit.surah))
+        else -> Harakat.all.map(Skills::vowel)
     }
 
     /** Harder versions: look-alike letters in joined forms, reading with similar options, next word. */
@@ -615,17 +627,26 @@ class LessonBuilder(
     }
 
     private fun examVoices(examId: String): List<Exercise.Voice> {
-        val voices = when (examId) {
-            Exams.LETTERS -> letterNameVoices()
-            Exams.VOWELS -> openingVoices()
-            Exams.READING -> shortAyahVoices()
+        val voices = when {
+            examId == Exams.LETTERS -> letterNameVoices(Letters.all)
+            examId == Exams.VOWELS -> openingVoices()
+            examId == Exams.READING -> shortAyahVoices()
+            Exams.isUnitCheck(examId) -> {
+                val unit = Course.unitOf(examId)
+                when {
+                    unit.letters.isNotEmpty() -> letterNameVoices(unit.letters)
+                    unit.rule != null -> shortAyahVoices()
+                    unit.surah != null -> hifzVoices(listOf(unit.surah), pool = Hifz.surahs.map { it.number })
+                    else -> openingVoices()
+                }
+            }
             else -> hifzVoices(Exams.hifzGroupOf(examId).orEmpty())
         }
         // Without the letter recordings the openings are recited instead, so every exam has a voice question.
         return voices.ifEmpty { openingVoices() }
     }
 
-    private fun letterNameVoices(): List<Exercise.Voice> = Letters.all.mapNotNull { letter ->
+    private fun letterNameVoices(letters: List<Letter>): List<Exercise.Voice> = letters.mapNotNull { letter ->
         val target = audio.name(letter) ?: return@mapNotNull null
         // Decoys should sound clearly different, so none come from the letter's look-alike group.
         val family = lookAlikes.firstOrNull { letter in it }.orEmpty()
@@ -669,15 +690,15 @@ class LessonBuilder(
         )
     }
 
-    /** Recite the first ayah of each surah in the group from memory. */
-    private fun hifzVoices(surahs: List<Int>): List<Exercise.Voice> = surahs.map { s ->
+    /** Recite the first ayah of each surah from memory; decoys are other surahs from [pool]. */
+    private fun hifzVoices(surahs: List<Int>, pool: List<Int> = surahs): List<Exercise.Voice> = surahs.map { s ->
         val name = Hifz.surahs.firstOrNull { it.number == s }?.name ?: quran.suraName(s)
         Exercise.Voice(
             prompt = "Recite the first ayah of $name from memory",
             big = null,
             caption = name,
             target = Sound.Ayah(AyahRef(s, 1)),
-            decoys = (surahs - s).shuffled(random).take(3).map { Sound.Ayah(AyahRef(it, 1)) },
+            decoys = (pool - s).shuffled(random).take(3).map { Sound.Ayah(AyahRef(it, 1)) },
             reveal = quran.text(AyahRef(s, 1)),
             skill = Skills.surah(s),
         )

@@ -96,13 +96,15 @@ on the home screen builds a session from what is due, weakest first. Practice co
 and gives one back, so it is also the way to keep going when hearts run out. Progress is saved locally:
 `%APPDATA%\Iqra\progress.json` on Windows, app storage on Android.
 
-**Exams and coins.** Each stage ends with an exam: after the 28 letters, after the vowels and
-opening letters, after the reading rules, and after every 5 memorised surahs. An exam has 10
-questions: half ordinary quiz questions, a fifth harder ones (look-alike letters in joined
-forms, "which one is read …", next word), and the rest voice questions (always at least one).
-Exams use no hearts and give no second tries; 80% passes. Passing an exam for the first time
-earns 1 coin (retakes earn none). 3 coins unlock unlimited hearts, which last until the streak
-breaks (a whole day missed); then they cost 3 coins again.
+**Exams and coins.** Every unit ends with a **unit check** (5 questions, one of them voice),
+and each stage ends with a **stage exam** instead (10 questions, three of them voice): after the
+28 letters, after the vowels and opening letters, after the reading rules, and after every 5
+memorised surahs. Questions are half ordinary quiz, a fifth harder (look-alike letters in joined
+forms, "which one is read …", next word) and the rest voice, always at least one. Exams use no
+hearts and give no second tries; 80% passes. A first pass earns coins (unit check 1, stage exam
+3; retakes earn none). 5 coins unlock unlimited hearts, which last until the streak breaks (a
+whole day missed); then they cost 5 coins again. The next exam to take is shown near the top of
+the home screen.
 
 **Voice questions** (`engine/VoiceMatch.kt`): say a letter's name, recite an opening, read a
 short ayah aloud, or recite a surah's first ayah from memory. The recording is compared on the

@@ -3,6 +3,7 @@ package app.iqra.engine
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import app.iqra.data.Exams
 import app.iqra.nowMillis
 import app.iqra.readProgress
 import app.iqra.scheduleReminder
@@ -19,8 +20,8 @@ const val MAX_HEARTS = 5
  */
 const val DEV_UNLIMITED_HEARTS = true
 
-/** Coins needed to unlock unlimited hearts; one coin is earned for each exam passed. */
-const val UNLIMITED_HEARTS_PRICE = 3
+/** Coins needed to unlock unlimited hearts (a unit check earns 1, a stage exam 3; see [Exams]). */
+const val UNLIMITED_HEARTS_PRICE = 5
 const val HEART_REFILL_MS = 20 * 60 * 1000L
 const val LESSON_XP = 10
 const val PERFECT_BONUS_XP = 5
@@ -91,11 +92,11 @@ data class Progress(
         if (!canBuyUnlimitedHearts(today)) this
         else copy(coins = coins - UNLIMITED_HEARTS_PRICE, unlimitedHearts = true, unlimitedSince = today, hearts = MAX_HEARTS)
 
-    /** A passed exam counts as a completed lesson; only the first pass earns a coin. */
+    /** A passed exam counts as a completed lesson; only the first pass earns coins. */
     fun passExam(examId: String, xpGained: Int, today: Long): Progress {
         val first = examId !in passedExams
         return completeLesson(examId, xpGained, today)
-            .copy(passedExams = passedExams + examId, coins = coins + if (first) 1 else 0)
+            .copy(passedExams = passedExams + examId, coins = coins + if (first) Exams.coinsFor(examId) else 0)
     }
 
     fun xpOn(today: Long): Int = if (xpDay == today) xpToday else 0

@@ -85,7 +85,7 @@ class ScreenshotTest {
         shot("exam-voice") {
             LessonScreen(app.iqra.data.Exams.READING, "Exam: reading", listOf(exam.first { it is Exercise.Voice }), ProgressStore(), {}, {})
         }
-        shot("exam-passed") { ResultScreen(LessonResult("Exam: all 28 letters", true, 20, 90, exam = true, coinEarned = true), 3) {} }
+        shot("exam-passed") { ResultScreen(LessonResult("Exam: all 28 letters", true, 20, 90, exam = true, coinsEarned = 3), 3) {} }
         shot("exam-failed") { ResultScreen(LessonResult("Exam: all 28 letters", false, 0, 60, exam = true), 3) {} }
     }
 }

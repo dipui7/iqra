@@ -93,7 +93,7 @@ fun HomeScreen(
     ) {
         item { Header(progress, onAbout, onSettings, onSupport, onBadges) }
         item { CoinsCard(progress, today, onBuyUnlimited) }
-        nextExam(progress)?.let { (unit, exam) -> item { NextExamCard(unit, exam.title) { start(exam.id) } } }
+        nextExam(progress)?.let { (unit, exam) -> item { NextExamCard(unit, exam) { start(exam.id) } } }
         if (progress.skills.isNotEmpty()) item { PracticeCard(progress.dueCount(today), progress.hearts < MAX_HEARTS, onPractice) }
         item { TrackSwitch(track, onTrackChange) }
         if (track == Track.Hifz) {
@@ -238,13 +238,19 @@ private fun PracticeCard(due: Int, canEarnHeart: Boolean, onPractice: () -> Unit
     }
 }
 
+private fun earnsCoins(examId: String): String {
+    val n = Exams.coinsFor(examId)
+    return "earns $n ${if (n == 1) "coin" else "coins"}"
+}
+
 /** The first exam not passed yet, reading track first, with the unit it ends. */
 private fun nextExam(progress: Progress): Pair<CourseUnit, Lesson>? =
     (Course.units + Course.hifzUnits).flatMap { u -> u.lessons.filter { Exams.isExam(it.id) }.map { u to it } }
         .firstOrNull { (_, l) -> l.id !in progress.passedExams && Course.isUnlocked(l.id, progress.completed) }
 
 @Composable
-private fun NextExamCard(unit: CourseUnit, title: String, onStart: () -> Unit) {
+private fun NextExamCard(unit: CourseUnit, exam: Lesson, onStart: () -> Unit) {
+    val where = if (unit.track == Track.Reading) "Unit ${unit.id.drop(1)}" else unit.title
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card).clickable(onClick = onStart)
             .padding(horizontal = 18.dp, vertical = 14.dp),
@@ -255,9 +261,12 @@ private fun NextExamCard(unit: CourseUnit, title: String, onStart: () -> Unit) {
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = palette.text)
             Text(
-                "Next exam · after ${if (unit.track == Track.Reading) "Unit ${unit.id.drop(1)}" else unit.title} · earns a coin",
+                if (Exams.isUnitCheck(exam.id)) "Unit check: ${unit.title}" else exam.title,
+                style = MaterialTheme.typography.titleMedium, color = palette.text,
+            )
+            Text(
+                (if (Exams.isUnitCheck(exam.id)) "Next · 5 questions · " else "Next exam · after $where · ") + earnsCoins(exam.id),
                 style = MaterialTheme.typography.bodyMedium, color = palette.secondary,
             )
         }
@@ -350,14 +359,15 @@ private fun UnitCard(unit: CourseUnit, progress: Progress, onStart: (String) -> 
             if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = palette.separator)
             val completed = lesson.id in progress.completed
             val unlocked = Course.isUnlocked(lesson.id, progress.completed)
-            LessonRow(lesson.title, completed, unlocked, exam = Exams.isExam(lesson.id)) { onStart(lesson.id) }
+            LessonRow(lesson.title, completed, unlocked, examId = lesson.id.takeIf(Exams::isExam)) { onStart(lesson.id) }
         }
         Spacer(Modifier.height(6.dp))
     }
 }
 
 @Composable
-private fun LessonRow(title: String, completed: Boolean, unlocked: Boolean, exam: Boolean = false, onClick: () -> Unit) {
+private fun LessonRow(title: String, completed: Boolean, unlocked: Boolean, examId: String? = null, onClick: () -> Unit) {
+    val exam = examId != null
     val (icon, bg, fg) = when {
         // Exams stand out: a star in the coin colour.
         exam && unlocked -> Triple(if (completed) Icons.Rounded.Check else Icons.Rounded.Stars, palette.streak, palette.onAccent)
@@ -377,7 +387,7 @@ private fun LessonRow(title: String, completed: Boolean, unlocked: Boolean, exam
             Text(title, style = MaterialTheme.typography.bodyLarge, color = if (unlocked) palette.text else palette.secondary)
             if (exam) {
                 Text(
-                    if (completed) "Passed" else "Pass to earn a coin",
+                    if (completed) "Passed" else "Pass to ${earnsCoins(examId!!).replace("earns", "earn")}",
                     style = MaterialTheme.typography.bodySmall, color = palette.streak,
                 )
             }

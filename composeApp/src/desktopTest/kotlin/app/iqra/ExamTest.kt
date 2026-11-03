@@ -37,6 +37,15 @@ class ExamTest {
     }
 
     @Test
+    fun everyUnitEndsWithExactlyOneCheckOrExam() {
+        for (unit in Course.units + Course.hifzUnits) {
+            val exams = unit.lessons.filter { Exams.isExam(it.id) }
+            assertEquals(1, exams.size, "${unit.id} has ${exams.size} exams")
+            assertEquals(exams.single(), unit.lessons.last(), "${unit.id}: the exam should be last")
+        }
+    }
+
+    @Test
     fun examsMixQuizHardAndVoiceWithAtLeastOneVoice() {
         val examIds = Course.allLessons.filter { Exams.isExam(it.id) }.map { it.id }
         repeat(20) { seed ->
@@ -46,8 +55,13 @@ class ExamTest {
                     val exam = builder.exam(id)
                     val voices = exam.count { it is Exercise.Voice }
                     assertTrue(voices >= 1, "$id has no voice question")
-                    assertEquals(10, exam.size, "$id has ${exam.size} questions")
-                    assertEquals(3, voices, "$id: expected 3 voice questions")
+                    if (Exams.isUnitCheck(id)) {
+                        assertEquals(Exams.CHECK_SIZE, exam.size, "$id has ${exam.size} questions")
+                        assertEquals(1, voices, "$id: expected 1 voice question")
+                    } else {
+                        assertEquals(Exams.STAGE_SIZE, exam.size, "$id has ${exam.size} questions")
+                        assertEquals(3, voices, "$id: expected 3 voice questions")
+                    }
                     for (e in exam) if (e is Exercise.Choice) assertTrue(e.correct in e.options.indices)
                     for (e in exam) if (e is Exercise.Voice) assertTrue(e.decoys.isNotEmpty() && e.target !in e.decoys)
                 }
@@ -58,10 +72,13 @@ class ExamTest {
     @Test
     fun coinsComeFromFirstPassesAndBuyUnlimitedHearts() {
         var p = Progress()
-        p = p.passExam("exam-letters", 20, day)
-        p = p.passExam("exam-letters", 20, day) // a retake earns nothing
-        assertEquals(1, p.coins)
-        p = p.passExam("exam-vowels", 20, day).passExam("exam-reading", 20, day)
+        p = p.passExam(Exams.check("u1"), 10, day)
+        p = p.passExam(Exams.check("u1"), 10, day) // a retake earns nothing
+        assertEquals(Exams.CHECK_COINS, p.coins)
+        p = p.passExam(Exams.check("u2"), 10, day)
+        assertFalse(p.canBuyUnlimitedHearts(day))
+        p = p.passExam(Exams.LETTERS, 20, day)
+        assertEquals(2 * Exams.CHECK_COINS + Exams.STAGE_COINS, p.coins)
         assertEquals(UNLIMITED_HEARTS_PRICE, p.coins)
         assertTrue(p.canBuyUnlimitedHearts(day))
         p = p.buyUnlimitedHearts(day)

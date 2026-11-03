@@ -66,7 +66,7 @@ fun ResultScreen(result: LessonResult, streak: Int, newBadges: Set<String> = emp
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ResultStat("+${result.xp}", "XP", palette.accent, Modifier.weight(1f))
                 ResultStat("${result.accuracy}%", if (result.exam) "Score" else "Accuracy", palette.correct, Modifier.weight(1f))
-                if (result.coinEarned) ResultStat("+1", "Coin", palette.streak, Modifier.weight(1f))
+                if (result.coinsEarned > 0) ResultStat("+${result.coinsEarned}", if (result.coinsEarned == 1) "Coin" else "Coins", palette.streak, Modifier.weight(1f))
                 else if (result.heartGained) ResultStat("+1", "Heart", palette.heart, Modifier.weight(1f))
                 else ResultStat("$streak", if (streak == 1) "Day streak" else "Days streak", palette.streak, Modifier.weight(1f))
             }

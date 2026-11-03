@@ -56,12 +56,29 @@ data class CourseUnit(
 /** An ayah that consists only of opening letters, with the letters it is made of. */
 data class Opening(val ref: AyahRef, val letters: List<Letter>)
 
-/** End-of-stage exams and what each one covers. */
+/**
+ * Exams: a short unit check at the end of every unit, and a longer stage exam at the end of
+ * each stage (a stage exam replaces that unit's check). Both are [LessonKind.Exam].
+ */
 object Exams {
     const val LETTERS = "exam-letters"
     const val VOWELS = "exam-vowels"
     const val READING = "exam-reading"
     const val HIFZ_GROUP = 5
+
+    /** Coins for passing for the first time. */
+    const val CHECK_COINS = 1
+    const val STAGE_COINS = 3
+    const val CHECK_SIZE = 5
+    const val STAGE_SIZE = 10
+
+    fun check(unitId: String) = "check-$unitId"
+
+    fun isUnitCheck(lessonId: String) = lessonId.startsWith("check-")
+
+    fun isStageExam(lessonId: String) = lessonId.startsWith("exam-")
+
+    fun coinsFor(lessonId: String) = if (isUnitCheck(lessonId)) CHECK_COINS else STAGE_COINS
 
     /** Memorised surahs in groups of [HIFZ_GROUP], in learning order; a smaller last group gets no exam. */
     val hifzGroups: List<List<Int>> = Hifz.surahs.map { it.number }.chunked(HIFZ_GROUP).filter { it.size == HIFZ_GROUP }
@@ -71,7 +88,8 @@ object Exams {
     fun hifzGroupOf(examId: String): List<Int>? =
         examId.removePrefix("exam-hifz-").toIntOrNull()?.let { hifzGroups.getOrNull(it - 1) }
 
-    fun isExam(lessonId: String) = lessonId.startsWith("exam-")
+    /** A unit check or a stage exam. */
+    fun isExam(lessonId: String) = isStageExam(lessonId) || isUnitCheck(lessonId)
 }
 
 /** While the app is in development every lesson is open. Set to false to unlock in order again. */
@@ -135,7 +153,7 @@ object Course {
                     Lesson("u14-review", "Final review", LessonKind.ReadingReview),
                 ),
             ).withExam(Exams.READING, "Exam: reading"),
-        )
+        ).map { it.withUnitCheck() }
     }
 
     private fun ruleUnit(n: Int, title: String, rule: Rule) = CourseUnit(
@@ -164,6 +182,10 @@ object Course {
     private fun CourseUnit.withExam(id: String, title: String) =
         copy(lessons = lessons + Lesson(id, title, LessonKind.Exam))
 
+    /** Every unit ends with a check, unless it already ends with a stage exam. */
+    private fun CourseUnit.withUnitCheck() =
+        if (lessons.any { it.kind == LessonKind.Exam }) this else withExam(Exams.check(id), "Unit check")
+
     /** The memorisation track: one unit per short surah, with an exam after every [Exams.HIFZ_GROUP]. */
     val hifzUnits: List<CourseUnit> = Hifz.surahs.map { s ->
         val unit = CourseUnit(
@@ -180,7 +202,7 @@ object Course {
             ),
         )
         val group = Exams.hifzGroups.indexOfFirst { g -> g.last() == s.number }
-        if (group < 0) unit
+        if (group < 0) unit.withUnitCheck()
         else unit.withExam(Exams.hifz(group), "Exam: ${Exams.hifzGroups[group].size} surahs")
     }
 

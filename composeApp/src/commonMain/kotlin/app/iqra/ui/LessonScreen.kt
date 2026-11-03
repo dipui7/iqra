@@ -83,9 +83,9 @@ data class LessonResult(
     /** A practice session, which also gives a heart back if any were missing. */
     val practice: Boolean = false,
     val heartGained: Boolean = false,
-    /** An exam: [accuracy] is the score, and [coinEarned] if it was passed for the first time. */
+    /** An exam: [accuracy] is the score, and [coinsEarned] if it was passed for the first time. */
     val exam: Boolean = false,
-    val coinEarned: Boolean = false,
+    val coinsEarned: Int = 0,
 )
 
 /** Share of exam questions that must be answered right to pass. */
@@ -121,9 +121,10 @@ fun LessonScreen(
             val score = if (session.gradedCount == 0) 0 else 100 * session.rightCount / session.gradedCount
             val ok = score >= EXAM_PASS_PERCENT
             val firstPass = ok && lessonId !in store.progress.passedExams
-            val xp = if (ok) LESSON_XP * 2 else 0
+            // A stage exam is worth two lessons' XP; a unit check one.
+            val xp = if (!ok) 0 else if (Exams.isStageExam(lessonId)) LESSON_XP * 2 else LESSON_XP
             if (ok) store.passExam(lessonId, xp)
-            onFinished(LessonResult(title, ok, xp, score, exam = true, coinEarned = firstPass))
+            onFinished(LessonResult(title, ok, xp, score, exam = true, coinsEarned = if (firstPass) Exams.coinsFor(lessonId) else 0))
             return
         }
         val questions = exercises.count { it !is Exercise.LetterIntro && it !is Exercise.RuleIntro && it !is Exercise.AyahIntro }

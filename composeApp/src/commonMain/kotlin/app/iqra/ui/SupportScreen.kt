@@ -117,9 +117,9 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
     Text(
         label,
         style = MaterialTheme.typography.bodyMedium,
-        color = if (selected) palette.onAccent else palette.text,
+        color = if (selected) palette.onAccentFill else palette.text,
         modifier = Modifier.clip(RoundedCornerShape(50))
-            .background(if (selected) palette.accent else palette.card)
+            .background(if (selected) palette.accentFill else palette.card)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 6.dp),
     )

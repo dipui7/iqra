@@ -32,14 +32,14 @@ import androidx.compose.ui.unit.dp
 fun ResultScreen(result: LessonResult, streak: Int, newBadges: Set<String> = emptySet(), onContinue: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.weight(1f))
-        val tint = if (result.passed) palette.accent else palette.heart
+        val tint = if (result.passed) palette.accentFill else palette.heart
         Box(Modifier.size(96.dp).clip(CircleShape).background(tint), contentAlignment = Alignment.Center) {
             val icon = when {
                 result.passed -> Icons.Rounded.Check
                 result.exam -> Icons.Rounded.Refresh
                 else -> Icons.Rounded.HeartBroken
             }
-            Icon(icon, null, tint = palette.onAccent, modifier = Modifier.size(56.dp))
+            Icon(icon, null, tint = if (result.passed) palette.onAccentFill else palette.onAccent, modifier = Modifier.size(56.dp))
         }
         Spacer(Modifier.height(24.dp))
         Text(

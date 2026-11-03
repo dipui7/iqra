@@ -598,13 +598,18 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
 // --- Shared pieces ---------------------------------------------------------------------
 
 @Composable
-fun PrimaryButton(text: String, enabled: Boolean = true, color: Color = palette.accent, onClick: () -> Unit) {
+fun PrimaryButton(text: String, enabled: Boolean = true, color: Color = palette.accentFill, onClick: () -> Unit) {
+    // Dark text on the light green; white on the strong colours (correct, wrong).
+    val content = if (color == palette.accentFill) palette.onAccentFill else palette.onAccent
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().height(54.dp),
         shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = palette.separator),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color, contentColor = content,
+            disabledContainerColor = palette.separator, disabledContentColor = palette.secondary,
+        ),
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge)
     }
@@ -666,8 +671,8 @@ fun AudioButton(sound: Sound, label: String, autoPlay: Boolean = false) {
             .padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(32.dp).clip(CircleShape).background(palette.accent), contentAlignment = Alignment.Center) {
-            Icon(if (playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, null, tint = palette.onAccent, modifier = Modifier.size(18.dp))
+        Box(Modifier.size(32.dp).clip(CircleShape).background(palette.accentFill), contentAlignment = Alignment.Center) {
+            Icon(if (playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, null, tint = palette.onAccentFill, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(10.dp))
         Text(if (playing) "Playing…" else label, color = palette.accent, style = MaterialTheme.typography.bodyMedium)

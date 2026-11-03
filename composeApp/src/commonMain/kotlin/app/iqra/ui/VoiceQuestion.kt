@@ -172,11 +172,11 @@ fun VoiceQuestion(q: Exercise.Voice, session: LessonSession) {
                 val recording = state == VoiceState.Recording
                 Box(
                     Modifier.size(88.dp).clip(CircleShape)
-                        .background(if (recording) palette.wrong else palette.accent)
+                        .background(if (recording) palette.wrong else palette.accentFill)
                         .clickable(enabled = !answered) { toggleRecording() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(if (recording) Icons.Rounded.Stop else Icons.Rounded.Mic, if (recording) "Stop" else "Record", tint = palette.onAccent, modifier = Modifier.size(40.dp))
+                    Icon(if (recording) Icons.Rounded.Stop else Icons.Rounded.Mic, if (recording) "Stop" else "Record", tint = if (recording) palette.onAccent else palette.onAccentFill, modifier = Modifier.size(40.dp))
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(

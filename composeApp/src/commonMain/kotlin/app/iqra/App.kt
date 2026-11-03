@@ -139,6 +139,8 @@ fun App() {
                     showTranslation = store.progress.showTranslation,
                     onShowTajweed = store::setShowTajweed,
                     onShowTranslation = store::setShowTranslation,
+                    textSize = store.progress.readerTextSize,
+                    onTextSize = store::setReaderTextSize,
                 )
                 Screen.Badges -> BadgesScreen(store.progress, onBack = { screen = Screen.Home })
                 Screen.Support -> SupportScreen(onBack = { screen = Screen.Home })

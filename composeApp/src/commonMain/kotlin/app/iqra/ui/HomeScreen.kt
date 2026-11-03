@@ -371,7 +371,7 @@ private fun LessonRow(title: String, completed: Boolean, unlocked: Boolean, exam
     val (icon, bg, fg) = when {
         // Exams stand out: a star in the coin colour.
         exam && unlocked -> Triple(if (completed) Icons.Rounded.Check else Icons.Rounded.Stars, palette.streak, palette.onAccent)
-        completed -> Triple(Icons.Rounded.Check, palette.accent, palette.onAccent)
+        completed -> Triple(Icons.Rounded.Check, palette.accentFill, palette.onAccentFill)
         unlocked -> Triple(Icons.Rounded.PlayArrow, palette.accentSoft, palette.accent)
         else -> Triple(Icons.Rounded.Lock, palette.separator, palette.secondary)
     }

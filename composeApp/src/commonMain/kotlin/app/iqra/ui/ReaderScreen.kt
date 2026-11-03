@@ -46,6 +46,9 @@ import androidx.compose.ui.unit.dp
 import app.iqra.data.AyahRef
 import app.iqra.data.QuranMeta
 import app.iqra.data.SurahInfo
+import app.iqra.engine.READER_TEXT_DEFAULT
+import app.iqra.engine.READER_TEXT_SIZES
+import androidx.compose.ui.unit.sp
 import app.iqra.data.TajweedGroup
 import app.iqra.data.TajweedMark
 import app.iqra.data.TajweedMarks
@@ -113,6 +116,8 @@ fun ReaderScreen(
     showTranslation: Boolean = true,
     onShowTajweed: (Boolean) -> Unit = {},
     onShowTranslation: (Boolean) -> Unit = {},
+    textSize: Int = READER_TEXT_DEFAULT,
+    onTextSize: (Int) -> Unit = {},
 ) {
     val surah = info.number
     val ayat = remember(surah) { quran.surah(surah) }
@@ -187,9 +192,11 @@ fun ReaderScreen(
                     "Tap an ayah to hear it. Set repeats below to memorise.",
                     style = MaterialTheme.typography.bodySmall, color = palette.secondary,
                 )
-                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Toggle("Tajweed colours", showTajweed) { onShowTajweed(!showTajweed) }
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Toggle("Tajweed", showTajweed) { onShowTajweed(!showTajweed) }
                     Toggle("Translation", showTranslation) { onShowTranslation(!showTranslation) }
+                    Spacer(Modifier.weight(1f))
+                    TextSizeControl(textSize, onTextSize)
                 }
                 if (showTajweed) TajweedKey()
             }
@@ -225,13 +232,21 @@ fun ReaderScreen(
                         val marks = if (showTajweed) extras?.tajweed?.of(ref).orEmpty() else emptyList()
                         Text(
                             colouredAyah(text, marks),
-                            style = arabicStyle(if (text.length > 120) 24 else 28, lineFactor = 2.0)
+                            style = arabicStyle(textSize, lineFactor = 2.0)
                                 .copy(textDirection = TextDirection.Rtl, color = if (inRange) palette.text else palette.secondary),
                             textAlign = TextAlign.Start,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         if (showTranslation) extras?.translation?.of(ref)?.let {
-                            Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.secondary, modifier = Modifier.padding(top = 2.dp))
+                            // The translation grows a little with the Arabic, from 15 to 19 sp.
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = (15 + 4 * (textSize - READER_TEXT_SIZES.first) / (READER_TEXT_SIZES.last - READER_TEXT_SIZES.first)).sp,
+                                    lineHeight = (22 + 6 * (textSize - READER_TEXT_SIZES.first) / (READER_TEXT_SIZES.last - READER_TEXT_SIZES.first)).sp,
+                                ),
+                                color = palette.secondary, modifier = Modifier.padding(top = 2.dp),
+                            )
                         }
                     }
                 }
@@ -272,10 +287,10 @@ private fun Controls(
         ChipRow("Whole range", listOf(1, 3, 0), loops, { if (it == 0) "∞" else "$it×" }, onLoops)
         Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(52.dp).clip(CircleShape).background(palette.accent).clickable(onClick = onPlayPause),
+                Modifier.size(52.dp).clip(CircleShape).background(palette.accentFill).clickable(onClick = onPlayPause),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause" else "Play", tint = palette.onAccent, modifier = Modifier.size(30.dp))
+                Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause" else "Play", tint = palette.onAccentFill, modifier = Modifier.size(30.dp))
             }
             Spacer(Modifier.width(12.dp))
             Text(
@@ -313,10 +328,10 @@ private fun ChipRow(label: String, values: List<Int>, selected: Int, text: (Int)
             val on = v == selected
             Text(
                 text(v),
-                color = if (on) palette.onAccent else palette.text,
+                color = if (on) palette.onAccentFill else palette.text,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(end = 6.dp).clip(RoundedCornerShape(10.dp))
-                    .background(if (on) palette.accent else palette.background)
+                    .background(if (on) palette.accentFill else palette.background)
                     .clickable { onSelect(v) }.padding(horizontal = 12.dp, vertical = 5.dp),
             )
         }
@@ -328,14 +343,14 @@ private fun ChipRow(label: String, values: List<Int>, selected: Int, text: (Int)
 private fun AyahNumber(n: Int, highlighted: Boolean, dimmed: Boolean = false) {
     Box(
         Modifier.size(36.dp).clip(CircleShape)
-            .background(if (highlighted) palette.accent else palette.accentSoft),
+            .background(if (highlighted) palette.accentFill else palette.accentSoft),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             arabicDigits(n),
             style = arabicStyle(16, lineFactor = 1.3).copy(
                 color = when {
-                    highlighted -> palette.onAccent
+                    highlighted -> palette.onAccentFill
                     dimmed -> palette.secondary
                     else -> palette.accent
                 },
@@ -359,13 +374,14 @@ private fun colouredAyah(text: String, marks: List<TajweedMark>): AnnotatedStrin
 }
 
 fun tajweedColour(group: TajweedGroup, dark: Boolean): Color = when (group) {
-    TajweedGroup.Madd -> if (dark) Color(0xFFFF6B5B) else Color(0xFFC0392B)
-    TajweedGroup.Ghunnah -> if (dark) Color(0xFFF5B041) else Color(0xFFD35400)
-    TajweedGroup.Ikhfa -> if (dark) Color(0xFFBB8FCE) else Color(0xFF8E44AD)
-    TajweedGroup.Idghaam -> if (dark) Color(0xFF58D68D) else Color(0xFF1E8449)
-    TajweedGroup.Iqlab -> if (dark) Color(0xFF48C9B0) else Color(0xFF138D75)
-    TajweedGroup.Qalqalah -> if (dark) Color(0xFF5DADE2) else Color(0xFF2471A3)
-    TajweedGroup.Silent -> if (dark) Color(0xFF7F8C8D) else Color(0xFFA6ACAF)
+    // Vivid enough to stand out on thin strokes, and distinct from each other.
+    TajweedGroup.Madd -> if (dark) Color(0xFFFF6B6B) else Color(0xFFD62839)
+    TajweedGroup.Ghunnah -> if (dark) Color(0xFFFFB347) else Color(0xFFEF7B00)
+    TajweedGroup.Ikhfa -> if (dark) Color(0xFFD291FF) else Color(0xFF9C27B0)
+    TajweedGroup.Idghaam -> if (dark) Color(0xFF6EE7A0) else Color(0xFF14A04B)
+    TajweedGroup.Iqlab -> if (dark) Color(0xFF4DD0E1) else Color(0xFF0097A7)
+    TajweedGroup.Qalqalah -> if (dark) Color(0xFF64B5F6) else Color(0xFF1565C0)
+    TajweedGroup.Silent -> if (dark) Color(0xFF808782) else Color(0xFFADADA6)
 }
 
 /** What each colour means; tap a rule to read what it is. */
@@ -393,13 +409,31 @@ private fun TajweedKey() {
     open?.let { Text("${it.label}: ${it.hint}", style = MaterialTheme.typography.bodySmall, color = palette.secondary, modifier = Modifier.padding(top = 2.dp)) }
 }
 
+/** A− / A+ buttons for the size of the Arabic. */
+@Composable
+private fun TextSizeControl(size: Int, onChange: (Int) -> Unit) {
+    Row(Modifier.clip(RoundedCornerShape(50)).background(palette.card), verticalAlignment = Alignment.CenterVertically) {
+        val smaller = size > READER_TEXT_SIZES.first
+        val bigger = size < READER_TEXT_SIZES.last
+        Text(
+            "A", fontSize = 14.sp, color = if (smaller) palette.accent else palette.separator,
+            modifier = Modifier.clickable(enabled = smaller) { onChange(size - 2) }.padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+        Box(Modifier.size(1.dp, 18.dp).background(palette.separator))
+        Text(
+            "A", fontSize = 20.sp, color = if (bigger) palette.accent else palette.separator,
+            modifier = Modifier.clickable(enabled = bigger) { onChange(size + 2) }.padding(horizontal = 12.dp, vertical = 2.dp),
+        )
+    }
+}
+
 @Composable
 private fun Toggle(label: String, on: Boolean, onClick: () -> Unit) {
     Text(
         label,
         style = MaterialTheme.typography.bodyMedium,
-        color = if (on) palette.onAccent else palette.text,
-        modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) palette.accent else palette.card)
+        color = if (on) palette.onAccentFill else palette.text,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) palette.accentFill else palette.card)
             .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 6.dp),
     )
 }

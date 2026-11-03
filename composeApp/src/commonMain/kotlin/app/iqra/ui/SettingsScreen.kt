@@ -89,10 +89,10 @@ fun SettingsScreen(store: ProgressStore, onBack: () -> Unit) {
                         val on = progress.reminderHour == hour
                         Text(
                             if (hour == null) "Off" else "$hour:00",
-                            color = if (on) palette.onAccent else palette.text,
+                            color = if (on) palette.onAccentFill else palette.text,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                                .background(if (on) palette.accent else palette.background)
+                                .background(if (on) palette.accentFill else palette.background)
                                 .clickable { store.setReminder(hour) }
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         )

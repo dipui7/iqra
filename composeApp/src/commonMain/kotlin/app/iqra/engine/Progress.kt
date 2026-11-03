@@ -13,6 +13,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 const val MAX_HEARTS = 5
+const val READER_TEXT_DEFAULT = 32
+val READER_TEXT_SIZES = 22..48
 
 /**
  * While the app is in development hearts never run out. Set to false before release, so
@@ -77,6 +79,8 @@ data class Progress(
     /** Reader settings: colour tajweed rules, and show the English translation under each ayah. */
     val showTajweed: Boolean = true,
     val showTranslation: Boolean = true,
+    /** Size of the Arabic text in the reader, in sp. */
+    val readerTextSize: Int = READER_TEXT_DEFAULT,
 ) {
     /** Bought unlimited hearts last only while the streak is unbroken. */
     fun ownsUnlimitedHearts(today: Long): Boolean =
@@ -205,6 +209,8 @@ class ProgressStore {
     fun setShowTajweed(on: Boolean) = update { it.copy(showTajweed = on) }
 
     fun setShowTranslation(on: Boolean) = update { it.copy(showTranslation = on) }
+
+    fun setReaderTextSize(sp: Int) = update { it.copy(readerTextSize = sp.coerceIn(READER_TEXT_SIZES)) }
 
     fun setReminder(hour: Int?) {
         update { it.copy(reminderHour = hour) }

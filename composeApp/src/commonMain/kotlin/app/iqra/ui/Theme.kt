@@ -17,7 +17,11 @@ import app.iqra.resources.Res
 import app.iqra.resources.amiri_quran
 import org.jetbrains.compose.resources.Font
 
-/** Colours beyond Material's scheme: warm off-white and light green, in light and dark versions. */
+/**
+ * Colours beyond Material's scheme: a calm ivory with light green, in light and dark versions.
+ * Filled shapes (buttons, chips, checks) use the light [accentFill] with dark [onAccentFill]
+ * text; text, icons and lines use the deeper [accent] so they stay readable.
+ */
 @Immutable
 data class Palette(
     val background: Color,
@@ -25,9 +29,14 @@ data class Palette(
     val text: Color,
     val secondary: Color,
     val separator: Color,
+    /** Sage green for text, icons, outlines and progress. */
     val accent: Color,
+    /** Light green for filled buttons, chips and badges. */
+    val accentFill: Color,
+    /** Text and icons on [accentFill]. */
+    val onAccentFill: Color,
     val accentSoft: Color,
-    /** Text and icons drawn on [accent] (and on the other strong colours). */
+    /** Text and icons on the strong colours (correct, wrong, streak, heart). */
     val onAccent: Color,
     val correct: Color,
     val correctSoft: Color,
@@ -37,40 +46,44 @@ data class Palette(
     val heart: Color,
 )
 
-// Warm off-white paper with light green; the deeper green keeps buttons and links readable.
+// Warm ivory paper, cream cards, soft charcoal text and light sage green.
 private val Light = Palette(
-    background = Color(0xFFF7F5EE),
-    card = Color(0xFFFFFEFA),
-    text = Color(0xFF1F2A24),
-    secondary = Color(0xFF6B7570),
-    separator = Color(0xFFE7E5DA),
-    accent = Color(0xFF2E8B62),
-    accentSoft = Color(0xFFE4F2E7),
+    background = Color(0xFFF8F4EC),
+    card = Color(0xFFFFFDF8),
+    text = Color(0xFF2E2D28),
+    secondary = Color(0xFF7D786E),
+    separator = Color(0xFFEBE4D7),
+    accent = Color(0xFF4A8F69),
+    accentFill = Color(0xFFB3DCC3),
+    onAccentFill = Color(0xFF1D4632),
+    accentSoft = Color(0xFFE8F3EA),
     onAccent = Color.White,
-    correct = Color(0xFF2E8B57),
-    correctSoft = Color(0xFFE3F3E6),
-    wrong = Color(0xFFC8323C),
-    wrongSoft = Color(0xFFFBE9E7),
-    streak = Color(0xFFE8891A),
-    heart = Color(0xFFE0405E),
+    correct = Color(0xFF3F9160),
+    correctSoft = Color(0xFFE6F3E8),
+    wrong = Color(0xFFC4505A),
+    wrongSoft = Color(0xFFF9EAE6),
+    streak = Color(0xFFE39A3B),
+    heart = Color(0xFFDB5C72),
 )
 
-// Deep green-charcoal, with the same light green as the accent.
+// Deep green-charcoal, with the same light green.
 private val Dark = Palette(
-    background = Color(0xFF111613),
-    card = Color(0xFF1B221E),
-    text = Color(0xFFEDEFE9),
-    secondary = Color(0xFF8E9792),
-    separator = Color(0xFF2E3833),
-    accent = Color(0xFF6FD3A0),
-    accentSoft = Color(0xFF1E3428),
-    onAccent = Color(0xFF111613),
-    correct = Color(0xFF5FD37E),
-    correctSoft = Color(0xFF16301F),
-    wrong = Color(0xFFFF6B5E),
-    wrongSoft = Color(0xFF3A1A17),
-    streak = Color(0xFFFFA53A),
-    heart = Color(0xFFFF5C7A),
+    background = Color(0xFF121714),
+    card = Color(0xFF1C231F),
+    text = Color(0xFFECEEE7),
+    secondary = Color(0xFF959C96),
+    separator = Color(0xFF2F3934),
+    accent = Color(0xFF93D3AE),
+    accentFill = Color(0xFF93D3AE),
+    onAccentFill = Color(0xFF10261A),
+    accentSoft = Color(0xFF1F3529),
+    onAccent = Color(0xFF121714),
+    correct = Color(0xFF6CCB8A),
+    correctSoft = Color(0xFF17301F),
+    wrong = Color(0xFFFF7B70),
+    wrongSoft = Color(0xFF3A1B18),
+    streak = Color(0xFFFFB04D),
+    heart = Color(0xFFFF6F89),
 )
 
 val LocalPalette = staticCompositionLocalOf { Light }

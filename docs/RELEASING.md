@@ -18,6 +18,32 @@ Then copy `keystore.properties.example` to `keystore.properties` and put the pas
 (both `storePassword` and `keyPassword`, unless you chose two different ones).
 Both files are ignored by git, so they never reach GitHub.
 
+## Let GitHub build the signed APK (optional, recommended)
+
+Once these four **repository secrets** exist, every push also builds a signed
+`AlifUp-<version>.apk` (Actions → the run → Artifacts → `alifup-signed-apk`), and publishing a
+release on GitHub attaches it to the release automatically.
+
+On GitHub: **Settings → Secrets and variables → Actions → New repository secret**, four times:
+
+| Name | Value |
+|---|---|
+| `ALIFUP_KEYSTORE_BASE64` | the key file as text — see below |
+| `ALIFUP_KEYSTORE_PASSWORD` | the keystore password |
+| `ALIFUP_KEY_ALIAS` | `alifup` (or the alias you chose) |
+| `ALIFUP_KEY_PASSWORD` | the key password (the same as the keystore's, unless you chose two) |
+
+To turn the key file into text, in PowerShell in the folder with `alifup-release.jks` (this
+copies it to the clipboard; paste it as the secret's value):
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("alifup-release.jks")) | Set-Clipboard
+```
+
+GitHub keeps secrets encrypted and never shows them again, not even in build logs. Turn on
+two-factor sign-in for your GitHub account, since the account now guards the key. Keep your own
+backup of the `.jks` file anyway — GitHub can't give it back to you.
+
 ## Every release
 
 1. Raise the version in `composeApp/build.gradle.kts`: `versionCode` by one (Android uses
@@ -41,8 +67,9 @@ Both files are ignored by git, so they never reach GitHub.
 
    The installer is in `composeApp/build/compose/binaries/main/msi/`.
 
-5. On GitHub: Releases → Draft a new release → tag `v1.0.0` → attach the APK and the MSI →
-   paste the release notes → Publish.
+5. On GitHub: Releases → Draft a new release → tag `v1.0.0` → paste the release notes →
+   Publish. With the secrets above, the signed APK is attached a few minutes later by itself;
+   without them, attach the APK you built yourself. Attach the MSI by hand.
 
 ## Installing the APK on a phone
 

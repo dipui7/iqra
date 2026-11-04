@@ -1,6 +1,7 @@
 package app.iqra.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -39,6 +41,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
@@ -53,38 +58,114 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
-import app.iqra.data.AyahRef
-import app.iqra.data.Letter
+import app.iqra.data.Exams
+import app.iqra.data.Sound
+import app.iqra.stopRecording
+import app.iqra.todayEpochDay
 import app.iqra.engine.Exercise
 import app.iqra.engine.Feedback
 import app.iqra.engine.LESSON_XP
 import app.iqra.engine.LessonSession
+import app.iqra.engine.MAX_HEARTS
 import app.iqra.engine.Option
 import app.iqra.engine.PERFECT_BONUS_XP
+import app.iqra.engine.PRACTICE_XP
 import app.iqra.engine.ProgressStore
 import app.iqra.playAudio
+import app.iqra.playAudioBytes
+import app.iqra.Effect
+import app.iqra.Effects
+import app.iqra.resources.Res
 import app.iqra.stopAudio
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-data class LessonResult(val lessonId: String, val passed: Boolean, val xp: Int, val accuracy: Int)
+/** Shown instead of "Correct!": common Muslim words of praise, and plain English. */
+private val PRAISE = listOf(
+    "Correct!", "Mā shāʾ Allāh!", "Aḥsant! Well done", "Bārak Allāhu fīk!", "Excellent!", "Correct!", "Great job!",
+)
+
+data class LessonResult(
+    val title: String,
+    val passed: Boolean,
+    val xp: Int,
+    val accuracy: Int,
+    /** A practice session, which also gives a heart back if any were missing. */
+    val practice: Boolean = false,
+    val heartGained: Boolean = false,
+    /** An exam: [accuracy] is the score, and [coinsEarned] if it was passed for the first time. */
+    val exam: Boolean = false,
+    val coinsEarned: Int = 0,
+)
+
+/** Share of exam questions that must be answered right to pass. */
+const val EXAM_PASS_PERCENT = 80
 
 @Composable
 fun LessonScreen(
     lessonId: String,
+    title: String,
     exercises: List<Exercise>,
     store: ProgressStore,
     onClose: () -> Unit,
     onFinished: (LessonResult) -> Unit,
+    /** A practice session: mistakes cost no hearts, and finishing gives one back. */
+    practice: Boolean = false,
 ) {
-    val session = remember { LessonSession(exercises, store.progress.hearts, onMistake = store::loseHeart) }
+    val exam = Exams.isExam(lessonId)
+    val unlimited = remember { store.progress.hasUnlimitedHearts(todayEpochDay()) }
+    val session = remember {
+        LessonSession(
+            exercises, store.progress.hearts,
+            onMistake = store::loseHeart,
+            onAnswer = { skill, right -> skill?.let { store.recordAnswer(it, right) } },
+            heartsMatter = !practice && !exam && !unlimited,
+            exam = exam,
+        )
+    }
 
     fun finish(passed: Boolean) {
         stopAudio()
-        val questions = exercises.count { it !is Exercise.LetterIntro && it !is Exercise.VowelIntro }
+        stopRecording()
+        if (exam) {
+            val score = if (session.gradedCount == 0) 0 else 100 * session.rightCount / session.gradedCount
+            val ok = score >= EXAM_PASS_PERCENT
+            val firstPass = ok && lessonId !in store.progress.passedExams
+            // A stage exam is worth two lessons' XP; a unit check one.
+            val xp = if (!ok) 0 else if (Exams.isStageExam(lessonId)) LESSON_XP * 2 else LESSON_XP
+            if (ok) store.passExam(lessonId, xp)
+            onFinished(LessonResult(title, ok, xp, score, exam = true, coinsEarned = if (firstPass) Exams.coinsFor(lessonId) else 0))
+            return
+        }
+        val questions = exercises.count { it !is Exercise.LetterIntro && it !is Exercise.RuleIntro && it !is Exercise.AyahIntro }
         val accuracy = if (questions == 0) 100 else (100 * questions / (questions + session.mistakes))
-        val xp = if (passed) LESSON_XP + if (session.mistakes == 0) PERFECT_BONUS_XP else 0 else 0
-        if (passed) store.completeLesson(lessonId, xp)
-        onFinished(LessonResult(lessonId, passed, xp, accuracy))
+        val base = if (practice) PRACTICE_XP else LESSON_XP
+        val xp = if (passed) base + if (session.mistakes == 0) PERFECT_BONUS_XP else 0 else 0
+        val heartGained = passed && practice && store.progress.hearts < MAX_HEARTS
+        if (passed) {
+            if (practice) store.completePractice(xp) else store.completeLesson(lessonId, xp)
+        }
+        onFinished(LessonResult(title, passed, xp, accuracy, practice, heartGained))
+    }
+
+    // Right answers in a row, for "5 in a row".
+    var combo by remember { mutableIntStateOf(0) }
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(session.feedback) {
+        when (session.feedback) {
+            Feedback.Correct -> {
+                combo++
+                Effects.play(Effect.Correct)
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            }
+            is Feedback.Wrong -> {
+                combo = 0
+                Effects.play(Effect.Wrong)
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            null -> Unit
+        }
     }
 
     LaunchedEffect(session.finished) { if (session.finished) finish(passed = true) }
@@ -94,28 +175,40 @@ fun LessonScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        TopBar(session, onClose = { stopAudio(); onClose() })
+        TopBar(
+            session,
+            label = when {
+                exam -> "Exam"
+                practice -> "Practice"
+                else -> null
+            },
+            onClose = { stopAudio(); stopRecording(); onClose() },
+        )
         val exercise = session.current ?: return@Column
         key(session.index) {
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 when (exercise) {
-                    is Exercise.LetterIntro -> LetterIntro(exercise.letter)
-                    is Exercise.VowelIntro -> VowelIntro(exercise)
+                    is Exercise.LetterIntro -> LetterIntro(exercise)
+                    is Exercise.RuleIntro -> RuleIntro(exercise)
                     is Exercise.Choice -> ChoiceQuestion(exercise, session)
                     is Exercise.Match -> MatchQuestion(exercise, session)
+                    is Exercise.AyahIntro -> AyahIntro(exercise)
+                    is Exercise.Order -> OrderQuestion(exercise, session)
+                    is Exercise.Voice -> VoiceQuestion(exercise, session)
+                    is Exercise.Trace -> TraceQuestion(exercise, session)
                 }
             }
         }
-        BottomBar(exercise, session, onContinueAfterFeedback = {
+        BottomBar(exercise, session, combo, onContinueAfterFeedback = {
             if (session.outOfHearts) finish(passed = false) else session.next()
         })
     }
 }
 
 @Composable
-private fun TopBar(session: LessonSession, onClose: () -> Unit) {
+private fun TopBar(session: LessonSession, label: String?, onClose: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Quit lesson", tint = palette.secondary) }
         LinearProgressIndicator(
@@ -128,21 +221,40 @@ private fun TopBar(session: LessonSession, onClose: () -> Unit) {
             drawStopIndicator = {},
         )
         Spacer(Modifier.width(14.dp))
-        Icon(Icons.Rounded.Favorite, "Hearts", tint = palette.heart, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("${session.hearts}", style = MaterialTheme.typography.titleMedium, color = palette.heart)
+        if (session.usesHearts) {
+            Icon(Icons.Rounded.Favorite, "Hearts", tint = palette.heart, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("${session.hearts}", style = MaterialTheme.typography.titleMedium, color = palette.heart)
+        } else if (label != null) {
+            Text(label, style = MaterialTheme.typography.titleMedium, color = palette.accent)
+        } else {
+            // Unlimited hearts (bought with coins, or the developer switch).
+            Icon(Icons.Rounded.Favorite, "Unlimited hearts", tint = palette.heart, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("∞", style = MaterialTheme.typography.titleMedium, color = palette.heart)
+        }
     }
 }
 
 // --- Teaching cards --------------------------------------------------------------------
 
 @Composable
-private fun LetterIntro(letter: Letter) {
+private fun LetterIntro(intro: Exercise.LetterIntro) {
+    val letter = intro.letter
+    val name = rememberSoundPlayer(intro.name)
+    val tapToHear = if (name != null) Modifier.clickable { name.toggle() } else Modifier
     Label("NEW LETTER")
     Card {
-        Text(letter.char, style = arabicStyle(110, lineFactor = 1.4), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(letter.char, style = arabicStyle(110, lineFactor = 1.4), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().then(tapToHear))
         Text(letter.name, style = MaterialTheme.typography.titleLarge, color = palette.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Text(letter.hint, color = palette.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+    }
+    if (intro.name != null || intro.sound != null) {
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            intro.name?.let { AudioButton(it, "Its name") }
+            intro.sound?.let { AudioButton(it, "Its sound: ${letter.sound}a") }
+        }
     }
     Spacer(Modifier.height(16.dp))
     Label(if (letter.joins) "ITS SHAPES IN A WORD" else "DOES NOT JOIN TO THE NEXT LETTER")
@@ -154,7 +266,7 @@ private fun LetterIntro(letter: Letter) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         forms.forEach { (label, form) ->
             Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(palette.card).padding(vertical = 6.dp),
+                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(palette.card).then(tapToHear).padding(vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(form, style = arabicStyle(34))
@@ -162,31 +274,59 @@ private fun LetterIntro(letter: Letter) {
             }
         }
     }
-    letter.quranExample?.let { ref ->
-        Spacer(Modifier.height(16.dp))
-        AudioButton(ref, "Hear ${letter.name} recited (start of ${ref})")
+}
+
+@Composable
+private fun RuleIntro(intro: Exercise.RuleIntro) {
+    Label(intro.label)
+    Card {
+        Text(intro.name, style = MaterialTheme.typography.titleLarge, color = palette.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(intro.hint, color = palette.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+    }
+    Spacer(Modifier.height(16.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        intro.examples.forEach { syllable ->
+            val play = rememberSoundPlayer(syllable.sound)
+            Column(
+                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(palette.card)
+                    .then(if (play != null) Modifier.clickable { play.toggle() } else Modifier)
+                    .padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(syllable.arabic, style = arabicStyle(48))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(syllable.latin, style = MaterialTheme.typography.titleMedium, color = palette.accent)
+                    if (play != null) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            if (play.playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp,
+                            "Play ${syllable.latin}", tint = palette.accent, modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun VowelIntro(intro: Exercise.VowelIntro) {
-    Label("NEW VOWEL MARK")
+private fun AyahIntro(intro: Exercise.AyahIntro) {
+    Label("AYAH ${intro.ref.aya} OF ${intro.ayahCount} · ${intro.surahName.uppercase()}")
     Card {
-        Text(intro.haraka.name, style = MaterialTheme.typography.titleLarge, color = palette.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Text(intro.haraka.hint, color = palette.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+        Text(
+            intro.text,
+            style = arabicStyle(if (intro.text.length > 60) 30 else 36, lineFactor = 2.0).copy(textDirection = TextDirection.Rtl),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        )
     }
     Spacer(Modifier.height(16.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        intro.examples.forEach { (arabic, latin) ->
-            Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(palette.card).padding(vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(arabic, style = arabicStyle(48))
-                Text(latin, style = MaterialTheme.typography.titleMedium, color = palette.accent)
-            }
-        }
-    }
+    AudioButton(Sound.Ayah(intro.ref), "Listen again", autoPlay = true)
+    Text(
+        "Listen, then recite it aloud two or three times — looking, then with your eyes closed — before you continue.",
+        color = palette.secondary,
+        modifier = Modifier.padding(top = 14.dp),
+    )
 }
 
 // --- Questions -------------------------------------------------------------------------
@@ -195,9 +335,20 @@ private fun VowelIntro(intro: Exercise.VowelIntro) {
 private fun ChoiceQuestion(q: Exercise.Choice, session: LessonSession) {
     Text(q.prompt, style = MaterialTheme.typography.titleLarge, color = palette.text, modifier = Modifier.padding(vertical = 12.dp))
     if (q.big != null) {
+        val bigPlayer = rememberSoundPlayer(q.bigSound)
+        val answered = session.feedback != null
         Card {
             if (q.bigArabic) {
-                Text(q.big, style = arabicStyle(if (q.big.length <= 3) 96 else 48).copy(textDirection = TextDirection.Rtl), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                if (bigPlayer != null && answered) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        Icon(
+                            if (bigPlayer.playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp,
+                            "Tap the letter to hear it", tint = palette.accent, modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                Text(q.big, style = arabicStyle(if (q.big.length <= 3) 96 else 48).copy(textDirection = TextDirection.Rtl), textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().then(if (bigPlayer != null && answered) Modifier.clickable { bigPlayer.toggle() } else Modifier))
             } else {
                 Text(q.big, style = MaterialTheme.typography.titleLarge, color = palette.text, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp))
             }
@@ -209,8 +360,12 @@ private fun ChoiceQuestion(q: Exercise.Choice, session: LessonSession) {
     }
     if (q.audio != null) {
         // For "listen" questions the audio is the question; otherwise it is optional context.
-        val label = if (q.autoPlay) "Play again" else if (q.big != null) "Listen to the ayah" else "Listen"
-        val showNow = q.autoPlay || session.feedback != null || q.big != null
+        val label = when {
+            q.autoPlay -> "Play again"
+            q.audio is Sound.Ayah && q.big != null -> "Listen to the ayah"
+            else -> "Listen"
+        }
+        val showNow = session.feedback != null || q.autoPlay || (q.big != null && !q.audioAfterAnswer)
         if (showNow) {
             AudioButton(q.audio, label, autoPlay = q.autoPlay)
             Spacer(Modifier.height(12.dp))
@@ -236,6 +391,7 @@ private fun ChoiceQuestion(q: Exercise.Choice, session: LessonSession) {
 private fun OptionCard(option: Option, i: Int, q: Exercise.Choice, session: LessonSession, modifier: Modifier) {
     val fb = session.feedback
     val selected = session.selected == i
+    val player = rememberSoundPlayer(option.sound)
     val border = when {
         fb != null && i == q.correct -> palette.correct
         fb is Feedback.Wrong && selected -> palette.wrong
@@ -253,7 +409,8 @@ private fun OptionCard(option: Option, i: Int, q: Exercise.Choice, session: Less
             .clip(RoundedCornerShape(16.dp))
             .background(bg)
             .border(BorderStroke(2.dp, border), RoundedCornerShape(16.dp))
-            .clickable(enabled = fb == null) { session.selected = i }
+            // Before answering a tap selects; afterwards it plays the option (e.g. the letter's name).
+            .clickable(enabled = fb == null || player != null) { if (fb == null) session.selected = i else player?.toggle() }
             .heightIn(min = 60.dp)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
@@ -268,6 +425,71 @@ private fun OptionCard(option: Option, i: Int, q: Exercise.Choice, session: Less
         } else {
             Text(option.label, style = MaterialTheme.typography.bodyLarge, color = palette.text, textAlign = TextAlign.Center)
         }
+        if (fb != null && player != null) {
+            Icon(
+                if (player.playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Play",
+                tint = palette.accent, modifier = Modifier.align(Alignment.TopEnd).size(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun OrderQuestion(q: Exercise.Order, session: LessonSession) {
+    // Positions into q.items, shown shuffled; the learner taps them in order.
+    val shuffled = remember { q.items.indices.shuffled() }
+    val picked = remember { mutableStateListOf<Int>() }
+    val fb = session.feedback
+    LaunchedEffect(picked.size) {
+        session.orderAnswer = if (picked.size == q.items.size) picked.map { q.items[it] } else null
+    }
+
+    Text(q.prompt, style = MaterialTheme.typography.titleLarge, color = palette.text, modifier = Modifier.padding(top = 12.dp))
+    q.caption?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = palette.secondary, modifier = Modifier.padding(bottom = 8.dp)) }
+    Text(
+        if (fb is Feedback.Wrong) "The right order:" else "Tap the ayat from first to last. Tap a placed one to take it back.",
+        style = MaterialTheme.typography.bodySmall, color = palette.secondary, modifier = Modifier.padding(vertical = 6.dp),
+    )
+
+    val placed: List<Int> = if (fb is Feedback.Wrong) q.items.indices.toList() else picked
+    placed.forEachIndexed { n, i ->
+        OrderTile(
+            number = n + 1, text = q.items[i],
+            state = if (fb == Feedback.Correct) palette.correct else palette.accent,
+            enabled = fb == null,
+        ) { picked.remove(i) }
+    }
+    if (fb == null) {
+        if (picked.isNotEmpty() && picked.size < q.items.size) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp), color = palette.separator)
+        }
+        shuffled.filter { it !in picked }.forEach { i ->
+            OrderTile(number = null, text = q.items[i], state = palette.separator, enabled = true) { picked.add(i) }
+        }
+    }
+}
+
+@Composable
+private fun OrderTile(number: Int?, text: String, state: Color, enabled: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = 10.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(palette.card)
+            .border(BorderStroke(2.dp, state), RoundedCornerShape(16.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(28.dp).clip(CircleShape).background(if (number != null) state else palette.background), contentAlignment = Alignment.Center) {
+            if (number != null) Text("$number", color = palette.onAccent, style = MaterialTheme.typography.bodyMedium)
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text,
+            style = arabicStyle(if (text.length > 50) 22 else 26).copy(textDirection = TextDirection.Rtl),
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -285,12 +507,14 @@ private fun MatchQuestion(q: Exercise.Match, session: LessonSession) {
         val r = pickRight ?: return@LaunchedEffect
         if (q.pairs.contains(l to r)) {
             matched += l
+            if (matched.size < q.pairs.size) Effects.play(Effect.Correct)
             pickLeft = null
             pickRight = null
             if (matched.size == q.pairs.size) session.markSolved(showFeedback = true)
         } else {
             wrong = l to r
             session.registerMistake()
+            Effects.play(Effect.Wrong)
             delay(600)
             wrong = null
             pickLeft = null
@@ -342,15 +566,19 @@ private fun MatchTile(text: String, arabic: Boolean, done: Boolean, picked: Bool
 // --- Bottom bar ------------------------------------------------------------------------
 
 @Composable
-private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfterFeedback: () -> Unit) {
+private fun BottomBar(exercise: Exercise, session: LessonSession, combo: Int, onContinueAfterFeedback: () -> Unit) {
     val fb = session.feedback
+    // A different word of praise now and then, the way a teacher would say it.
+    val praise = remember(session.index, fb) { PRAISE.random() }
     val bg = when (fb) {
         Feedback.Correct -> palette.correctSoft
         is Feedback.Wrong -> palette.wrongSoft
         null -> palette.background
     }
     Column(Modifier.fillMaxWidth().background(bg).padding(20.dp)) {
-        AnimatedVisibility(visible = fb != null, enter = slideInVertically { it / 2 }) {
+        // No exit animation: the feedback is already cleared while it would slide out, so it
+        // would flash "Not quite" in red for a moment.
+        AnimatedVisibility(visible = fb != null, enter = slideInVertically { it / 2 }, exit = ExitTransition.None) {
             Column(Modifier.padding(bottom = 14.dp)) {
                 val good = fb == Feedback.Correct
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -360,12 +588,22 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (good) "Correct!" else "Not quite",
+                        if (good) praise else "Not quite",
                         style = MaterialTheme.typography.titleLarge,
                         color = if (good) palette.correct else palette.wrong,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
+                    if (good && combo >= 3) {
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "$combo in a row",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = palette.onAccent,
+                            modifier = Modifier.clip(RoundedCornerShape(50)).background(palette.streak).padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
+                    }
                 }
-                if (fb is Feedback.Wrong) {
+                if (fb is Feedback.Wrong && fb.answer != null) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                         Text("Answer: ", color = palette.text)
                         if (fb.answer.arabic) Text(fb.answer.label, style = arabicStyle(28))
@@ -374,6 +612,13 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
                 }
                 (exercise as? Exercise.Choice)?.explanation?.let {
                     Text(it, color = palette.secondary, modifier = Modifier.padding(top = 4.dp))
+                }
+                (exercise as? Exercise.Voice)?.let { v ->
+                    v.reveal?.let {
+                        Text(it, style = if (v.big == null) arabicStyle(26) else MaterialTheme.typography.bodyLarge, color = palette.text, modifier = Modifier.padding(top = 4.dp))
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    AudioButton(v.target, "Hear the recording")
                 }
             }
         }
@@ -385,6 +630,9 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
             )
             exercise is Exercise.Choice -> PrimaryButton("Check", enabled = session.selected != null, onClick = session::check)
             exercise is Exercise.Match -> PrimaryButton("Match all pairs", enabled = false, onClick = {})
+            exercise is Exercise.Order -> PrimaryButton("Check", enabled = session.orderAnswer != null, onClick = session::check)
+            exercise is Exercise.Voice -> PrimaryButton("Record your answer above", enabled = false, onClick = {})
+            exercise is Exercise.Trace -> Unit // its Check button is under the drawing
             else -> PrimaryButton("Continue", onClick = { session.markSolved(showFeedback = false) })
         }
     }
@@ -393,13 +641,18 @@ private fun BottomBar(exercise: Exercise, session: LessonSession, onContinueAfte
 // --- Shared pieces ---------------------------------------------------------------------
 
 @Composable
-fun PrimaryButton(text: String, enabled: Boolean = true, color: Color = palette.accent, onClick: () -> Unit) {
+fun PrimaryButton(text: String, enabled: Boolean = true, color: Color = palette.accentFill, onClick: () -> Unit) {
+    // Dark text on the light green; white on the strong colours (correct, wrong).
+    val content = if (color == palette.accentFill) palette.onAccentFill else palette.onAccent
     Button(
         onClick = onClick,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().height(54.dp),
         shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = color, disabledContainerColor = palette.separator),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color, contentColor = content,
+            disabledContainerColor = palette.separator, disabledContentColor = palette.secondary,
+        ),
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge)
     }
@@ -415,26 +668,54 @@ private fun Card(content: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card).padding(16.dp)) { content() }
 }
 
-@Composable
-fun AudioButton(ref: AyahRef, label: String, autoPlay: Boolean = false) {
-    var playing by remember(ref) { mutableStateOf(false) }
-    val toggle = {
+/** Plays one [Sound] and tracks whether it is playing. */
+class SoundPlayer internal constructor(
+    private val sound: Sound,
+    private val launch: (suspend () -> Unit) -> Unit,
+) {
+    var playing by mutableStateOf(false)
+        private set
+
+    fun toggle() {
         if (playing) {
+            playing = false
             stopAudio()
-        } else {
-            playing = true
-            playAudio(ref.audioUrl) { playing = false }
+            return
+        }
+        playing = true
+        when (val s = sound) {
+            is Sound.Ayah -> playAudio(s.ref.audioUrl) { playing = false }
+            is Sound.Clip -> launch {
+                val bytes = runCatching { Res.readBytes(s.path) }.getOrNull()
+                // Stopped while loading, or the file is missing: don't start.
+                if (bytes == null || !playing) playing = false
+                else playAudioBytes(bytes) { playing = false }
+            }
         }
     }
-    LaunchedEffect(ref) { if (autoPlay) toggle() }
-    DisposableEffect(ref) { onDispose { if (playing) stopAudio() } }
+}
+
+@Composable
+fun rememberSoundPlayer(sound: Sound?): SoundPlayer? {
+    if (sound == null) return null
+    val scope = rememberCoroutineScope()
+    val player = remember(sound) { SoundPlayer(sound) { block -> scope.launch { block() } } }
+    DisposableEffect(player) { onDispose { if (player.playing) stopAudio() } }
+    return player
+}
+
+@Composable
+fun AudioButton(sound: Sound, label: String, autoPlay: Boolean = false) {
+    val player = rememberSoundPlayer(sound)!!
+    val playing = player.playing
+    LaunchedEffect(sound) { if (autoPlay) player.toggle() }
     Row(
-        Modifier.clip(RoundedCornerShape(50)).background(palette.accentSoft).clickable(onClick = toggle)
+        Modifier.clip(RoundedCornerShape(50)).background(palette.accentSoft).clickable { player.toggle() }
             .padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(32.dp).clip(CircleShape).background(palette.accent), contentAlignment = Alignment.Center) {
-            Icon(if (playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, null, tint = Color.White, modifier = Modifier.size(18.dp))
+        Box(Modifier.size(32.dp).clip(CircleShape).background(palette.accentFill), contentAlignment = Alignment.Center) {
+            Icon(if (playing) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, null, tint = palette.onAccentFill, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(10.dp))
         Text(if (playing) "Playing…" else label, color = palette.accent, style = MaterialTheme.typography.bodyMedium)

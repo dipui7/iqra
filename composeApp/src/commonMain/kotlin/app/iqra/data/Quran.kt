@@ -21,10 +21,18 @@ data class QuranWord(val text: String, val ref: AyahRef)
 class QuranText private constructor(
     private val ayat: Map<AyahRef, String>,
     private val suraNames: Map<Int, String>,
+    private val bismillahs: Map<Int, String>,
 ) {
+    /** The basmala shown above a surah, exactly as Tanzil gives it (none for 1, where it is ayah 1, or 9). */
+    fun bismillah(sura: Int): String? = bismillahs[sura]
+
     fun text(ref: AyahRef): String = ayat[ref] ?: error("No ayah $ref")
 
     fun suraName(sura: Int): String = suraNames[sura] ?: sura.toString()
+
+    /** Every ayah of a surah, in order. */
+    fun surah(sura: Int): List<Pair<AyahRef, String>> =
+        generateSequence(1) { it + 1 }.map { AyahRef(sura, it) }.takeWhile { it in ayat }.map { it to ayat.getValue(it) }.toList()
 
     fun words(sura: Int): List<QuranWord> =
         ayat.filterKeys { it.sura == sura }.flatMap { (ref, text) ->
@@ -36,10 +44,12 @@ class QuranText private constructor(
     companion object {
         private val suraRegex = Regex("""<sura index="(\d+)" name="([^"]*)"""")
         private val ayaRegex = Regex("""<aya index="(\d+)" text="([^"]*)"""")
+        private val bismillahRegex = Regex("""bismillah="([^"]*)"""")
 
         fun parse(xml: String): QuranText {
             val ayat = HashMap<AyahRef, String>(6300)
             val names = HashMap<Int, String>(120)
+            val bismillahs = HashMap<Int, String>(120)
             var sura = 0
             for (line in xml.lineSequence()) {
                 suraRegex.find(line)?.let {
@@ -48,10 +58,11 @@ class QuranText private constructor(
                 }
                 ayaRegex.find(line)?.let {
                     ayat[AyahRef(sura, it.groupValues[1].toInt())] = it.groupValues[2]
+                    bismillahRegex.find(line)?.let { b -> bismillahs[sura] = b.groupValues[1] }
                 }
             }
             check(ayat.size == 6236) { "Quran text incomplete: ${ayat.size} ayat" }
-            return QuranText(ayat, names)
+            return QuranText(ayat, names, bismillahs)
         }
     }
 }

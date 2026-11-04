@@ -33,10 +33,34 @@ private val sources = listOf(
         "https://tanzil.net",
     ),
     Source(
+        "Translation — Saheeh International",
+        "English translation by Saheeh International, from Tanzil.net. Tanzil's translations are for " +
+            "non-commercial use only; AlifUp is free, with no ads or paid features.",
+        "https://tanzil.net/trans/",
+    ),
+    Source(
+        "Tajweed colours — quran-tajweed",
+        "Tajweed rule data by cpfair (github.com/cpfair/quran-tajweed), licensed under Creative Commons " +
+            "Attribution 4.0. Changed: its positions were moved onto the current Tanzil text, and the 35 marks " +
+            "whose letters differ were left out. The colours only highlight letters; the text is unchanged.",
+        "https://github.com/cpfair/quran-tajweed",
+    ),
+    Source(
+        "Surah names — Tanzil metadata",
+        "Surah names, meanings and juz divisions from Tanzil's Quran metadata, Creative Commons Attribution.",
+        "https://tanzil.net/docs/quran_metadata",
+    ),
+    Source(
         "Recitation — Mishary Rashid Alafasy",
-        "Per-ayah recordings streamed from EveryAyah.com when you tap play. The audio is not bundled with the app " +
-            "and an internet connection is needed to hear it.",
+        "Per-ayah recordings streamed from EveryAyah.com when you tap play. The audio is not bundled with the app; " +
+            "an ayah you have heard is kept on your device so it plays again without internet.",
         "https://everyayah.com",
+    ),
+    Source(
+        "Letter names — recordings",
+        "The spoken letter names are recordings published by razunatmohammed88-cyber on GitHub under the MIT " +
+            "License (Copyright © 2025 razunatmohammed88-cyber), trimmed and volume-matched for this app.",
+        "https://github.com/razunatmohammed88-cyber/arabic-alphabet-audio",
     ),
     Source(
         "Font — Amiri Quran",

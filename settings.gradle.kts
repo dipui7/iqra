@@ -1,4 +1,4 @@
-rootProject.name = "Iqra"
+rootProject.name = "AlifUp"
 
 pluginManagement {
     repositories {

@@ -1,10 +1,37 @@
-# Iqra — learn to read the Quran
+# AlifUp — learn to read the Quran
 
 A Duolingo-style app that teaches adult beginners to read Arabic letters, using
 real Quran text and recitation. One Kotlin codebase builds both an **Android app**
 and a **Windows desktop app** (Compose Multiplatform).
 
-"Iqra" (اقرأ, *read*) is a working name.
+## Version 1.0.0
+
+The first complete version: letters, vowels and reading rules; memorising 21 short surahs;
+a Quran reader with repeat loops; letter tracing; exams with voice questions; review practice;
+badges, coins and an Android daily reminder.
+
+Lessons unlock in order and hearts are limited, as for learners. For development, set
+`UNLOCK_ALL` (`data/Course.kt`) and `DEV_UNLIMITED_HEARTS` (`engine/Progress.kt`) to `true`.
+
+Before a public release: get permission from EveryAyah (or switch recitation source), record
+the ba/bi/bu syllables, and sign the Android release build.
+
+## Brand
+
+- **Name: AlifUp** — start at Alif (ا), the first letter, and level up: letters, reading
+  rules, memorising, the whole Quran. Chosen on 2026-11-04 because "Iqra" (the working name)
+  is used by at least eight Quran apps, one of them with the Android package ID `app.iqra`.
+  A quick store search found no app called AlifUp; a proper trademark search is still to do.
+- **Package ID:** `app.alifup` (Android). The Kotlin code keeps the package `app.iqra`, which
+  users never see.
+- **Logo:** the first four letters ا ب ت ث climbing from right to left (Arabic order), each
+  bigger and higher than the last on a small platform, like game levels. The Alif and the
+  letters' dots are amber (the dots are what tell ب ت ث apart), the letters go from light to
+  deep green, with two sparkles at the top. The letters are the real glyphs of the Amiri Quran
+  font (SIL OFL). Drawn by `tools/icon/make_icon.py` (needs Pillow and fontTools), which writes
+  the Android adaptive icon, the in-app icon and `composeApp/icon.png` / `icon.ico`.
+- **Colours:** warm ivory `#F8F4EC`, cream cards `#FFFDF8`, light sage `#B3DCC3` for filled
+  shapes, deeper sage `#4A8F69` for text and icons, amber `#E39A3B` for streaks and coins.
 
 ## Decisions (made on 2026-11-03)
 
@@ -14,9 +41,9 @@ and a **Windows desktop app** (Compose Multiplatform).
 | Audience | Adult beginners who don't read Arabic yet; English explanations |
 | First goal | Reading Arabic letters (letters → shapes → short vowels → letters in the Quran) |
 | Quran text | Tanzil Uthmani text v1.1, bundled **unaltered** |
-| Recitation | Mishary Alafasy per-ayah MP3s, **streamed** from EveryAyah at play time, never bundled |
+| Recitation | Mishary Alafasy per-ayah MP3s, **streamed** from EveryAyah at play time, never bundled (kept in a local cache once heard) |
 | Translations | None yet (not needed for letters; their licences differ — check before adding) |
-| Design | Minimal, Apple-like: grouped cards, system-style colours, light + dark mode |
+| Design | Minimal, Apple-like grouped cards; warm off-white and light green (dark mode: green-charcoal) |
 
 ## Content sources and licences
 
@@ -29,20 +56,39 @@ and a **Windows desktop app** (Compose Multiplatform).
 - **Recitation — [EveryAyah](https://everyayah.com)** (Mishary Rashid Alafasy, 128 kbps).
   EveryAyah publishes no licence, so the app streams from their URLs instead of redistributing
   files. Before a public release, get permission or switch to a source with explicit terms.
+- **Letter names — [arabic-alphabet-audio](https://github.com/razunatmohammed88-cyber/arabic-alphabet-audio)**,
+  MIT License (`licenses/letter-audio-MIT.txt`).
 - **Font — [Amiri Quran](https://github.com/aliftype/amiri)**, SIL Open Font License 1.1
   (`licenses/AmiriQuran-OFL.txt`).
+- **Translation — Saheeh International**, from [Tanzil](https://tanzil.net/trans/)
+  (`files/translation_en_sahih.txt`, verbatim with Tanzil's header). Tanzil's terms: non-commercial
+  use only. Fine while AlifUp is free with no ads or paid features; anything else needs the
+  publisher's permission.
+- **Tajweed colours — [cpfair/quran-tajweed](https://github.com/cpfair/quran-tajweed)**, CC BY 4.0
+  (`files/tajweed.txt`). Its positions refer to a 2017 copy of the Tanzil text, so
+  `tools/tajweed/map_tajweed.py` compares that copy with ours ayah by ayah and moves each mark to
+  the same character in ours: 60,022 of 60,057 marks are kept, the 35 whose letters changed are
+  dropped, and every kept mark is checked to sit on the letters its rule is about (also a test).
+  Only colours are added; the Quran text is never changed.
+- **Surah names and juz — [Tanzil metadata](https://tanzil.net/docs/quran_metadata)**
+  (`files/quran_metadata.xml`, unmodified), Creative Commons Attribution.
+- **Word-by-word meanings: not yet.** No source with clear terms has been found. Apps like Quranly
+  usually use the Quran Foundation (quran.com) API, which needs the app to be registered with them
+  and their terms accepted before use.
 - **Lesson text** (letter names, hints, transliterations) is written for this app and is not
   Quranic text. No Quranic text is generated or altered by AI or code.
 
 All of this is also shown in the app (ⓘ on the home screen).
 
-## What's in the first milestone
+## What's in it
 
-9 units, 23 lessons:
+14 units, 40 lessons:
 
 1–7. **The 28 letters** in groups of 3–5 (similar shapes together). Each unit has:
-   - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, and for 14 letters
-     a button to hear it recited in the Quran), then recognition questions.
+   - *Meet the letters* — a card per letter (name, sound, its 4 joined shapes, a button to
+     hear its name), **trace the letter** over a grey guide (finger or mouse; scored on a
+     grid: most of the drawing must be on the letter and most of the letter covered; a miss
+     costs no heart and says what to fix), then recognition and listening questions.
    - *Practice* — name ↔ letter, sound → letter, start-of-word shape → letter, match pairs.
    - *Find them in the Quran* — "which word contains Ba?" and "does this word contain Ta?" using
      real words from Al-Fātiḥah and Juz ʿAmma, with the ayah's audio.
@@ -50,10 +96,120 @@ All of this is also shown in the app (ⓘ on the home screen).
 9. **Letters in the Quran** — listen to the opening letters (الٓمٓ, يسٓ, طه …) recited and pick
    the text, or name the letters that make them up.
 
-Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, 5 hearts (lose one per
-mistake, refill one every 20 minutes), wrong answers come back at the end of the lesson,
-lessons unlock in order, completed lessons can be reviewed. Progress is saved locally:
-`%APPDATA%\Iqra\progress.json` on Windows, app storage on Android.
+10–13. **Reading rules** — sukūn, shadda, tanwīn, long vowels. Each unit: *Meet* (the mark,
+   examples, reading questions), *Read with it* (practice words, matching, earlier rules mixed
+   in) and *Find it in the Quran* ("Which word has a shadda?" with real Juz ʿAmma words).
+   Practice words are built from letters and marks the way a Qāʿida primer does; they are
+   lesson text, not Quranic text.
+14. **Reading words** — mixed practice words, every mark in real Quran words, final review.
+
+**Memorise** (second tab on the home screen) — 21 short surahs: Al-Fātiḥah and most of the
+end of Juz ʿAmma, in the usual memorisation order. Every surah is open from the start, with two
+lessons:
+- *Listen and learn* — each ayah is played and shown, with "recite it aloud" guidance; after
+  each new ayah, "what comes next?" links it to the one before; then put the ayat in order.
+- *Recite from memory* — what comes next, which word comes next (the start of an ayah, cut at
+  one of its own spaces), listen and pick the ayah, put the ayat in order.
+
+Questions only ever have one right answer: an ayah that occurs twice in its surah (Al-Kāfirūn 3
+and 5) is never used as a prompt, and identical ayat may be ordered either way round.
+
+**Quran** (third tab) — a reader for Al-Fātiḥah and all of Juz ʿAmma. The ayah being
+recited is highlighted and kept in view; tap any ayah to play from there. For memorising:
+choose a range of ayat, how many times each ayah repeats (1, 3, 5, 10) and how many times the
+range loops (once, 3×, until stopped). The basmala above each surah is Tanzil's, as written.
+
+**Badges** (trophy on the home screen) — 17 milestones: first lesson, 3/7/30-day streaks,
+100/500/1000 XP, all letters met, all letters strong, vowels, reading rules, reading words,
+first exam, Al-Fātiḥah by heart, 1/5/all surahs memorised. They are worked out from progress,
+so nothing extra is saved; new ones are celebrated on the results screen.
+
+**Sounds and encouragement** — soft feedback sounds for right and wrong answers, finishing a
+lesson and earning a badge. They are deliberately **not musical** (a water drop, a soft tap, a
+breath of air), since many Muslims avoid music around the Quran; `tools/sfx/make_sfx.py` makes
+them, and any can be replaced by an MP3 of the same name (e.g. a voice saying "mā shāʾ Allāh").
+Settings → Sound effects turns them off. Right answers also get words of praise
+("Mā shāʾ Allāh!", "Aḥsant!", "Bārak Allāhu fīk!"), a "5 in a row" streak, a light vibration
+on phones, and passing a lesson a short shower of green and gold dots.
+
+**Backup** (Settings) — "Copy backup code" puts all progress on the clipboard as one block of
+text (send it to yourself in any chat); "Restore from a backup code" takes it back on another
+device. Works the same on Android and Windows.
+
+**Daily reminder** (Settings, Android only) — off, 8:00, 13:00, 18:00 or 21:00; only shown if
+you haven't practised yet that day, and set again after the phone restarts.
+
+Game mechanics: XP (10 per lesson, +5 if no mistakes), daily streak, daily XP goal (10/20/30/50,
+set in Settings), 5 hearts (lose one per mistake, refill one every 20 minutes), wrong answers
+come back at the end of the lesson, lessons unlock in order, completed lessons can be reviewed.
+
+**Review system.** Every question is tagged with what it practises (a letter, a vowel, a rule).
+Each of these has a Leitner-style schedule: a right answer moves it up a box and pushes its
+next review out (1, 2, 4, 8, 16 days), a wrong one sends it back to today. The *Practice* card
+on the home screen builds a session from what is due, weakest first. Practice costs no hearts
+and gives one back, so it is also the way to keep going when hearts run out. Progress is saved locally:
+`%APPDATA%\AlifUp\progress.json` on Windows (copied over once from the old `%APPDATA%\Iqra`),
+app storage on Android.
+
+**Exams and coins.** Every unit ends with a **unit check** (5 questions, one of them voice),
+and each stage ends with a **stage exam** instead (10 questions, three of them voice): after the
+28 letters, after the vowels and opening letters, after the reading rules, and after every 5
+memorised surahs. Questions are half ordinary quiz, a fifth harder (look-alike letters in joined
+forms, "which one is read …", next word) and the rest voice, always at least one. Exams use no
+hearts and give no second tries; 80% passes. A first pass earns coins (unit check 1, stage exam
+3; retakes earn none). 5 coins unlock unlimited hearts, which last until the streak breaks (a
+whole day missed); then they cost 5 coins again. The next exam to take is shown near the top of
+the home screen.
+
+**Voice questions** (`engine/VoiceMatch.kt`): say a letter's name, recite an opening, read a
+short ayah aloud, or recite a surah's first ayah from memory. The recording is compared on the
+device (never uploaded) with the right recording and three decoys, using MFCC features and
+dynamic time warping; it passes if it sounds closest to the right one, with 3 tries. This checks
+how alike the recordings sound — it is not a pronunciation or tajweed check, and the app says
+so. It has only been tested with the reference recordings themselves (including slowed,
+quieter, noisy copies), not yet with real learners' voices; thresholds may need tuning.
+
+**Help others.** A page (heart-in-hand icon on the home screen) lists well-known organisations
+helping people in Gaza, Sudan and DR Congo, linking to their own websites. The app handles no
+money and is not affiliated with them. Review the list before each release, and check the app
+stores' rules on linking to donations.
+
+**Developer switches** — both must be set back before release:
+- `UNLOCK_ALL = true` in `data/Course.kt`: every lesson is open.
+- `DEV_UNLIMITED_HEARTS = true` in `engine/Progress.kt`: hearts never run out (release: 5 hearts).
+
+## Letter sounds
+
+Each letter has its own short recordings, bundled with the app in
+`composeApp/src/commonMain/composeResources/files/letters/`:
+
+| File | What is said |
+|---|---|
+| `ba.mp3` | the letter's name, "bā'" |
+| `ba_a.mp3`, `ba_i.mp3`, `ba_u.mp3` | the letter with fatḥa / kasra / ḍamma: "ba", "bi", "bu" |
+
+The app uses whatever is there: letter cards get "Its name" / "Its sound" buttons, and lessons
+add listening questions ("Listen. Which letter makes this sound?", "Which did you hear?").
+Missing clips are simply not offered — the app never plays a whole ayah as if it were a letter.
+
+**Letter names: bundled** — 28 recordings published under the MIT License by
+[razunatmohammed88-cyber](https://github.com/razunatmohammed88-cyber/arabic-alphabet-audio)
+(licence in `licenses/letter-audio-MIT.txt`, details in `files/letters/CREDITS.md`).
+
+**Syllables (ba, bi, bu …): not recorded yet**, so "Its sound" buttons and sound-listening
+questions don't appear. To make them, record three takes (fatḥa, kasra, ḍamma — a pause
+between items) with a teacher or a clear reciter, and split them:
+
+```bash
+python3 tools/letter-audio/make_clips.py script
+```
+
+```bash
+python3 tools/letter-audio/make_clips.py split a fatha.m4a
+```
+
+See `tools/letter-audio/make_clips.py` for details. Credit the reciter in
+`files/letters/CREDITS.md` and in `AboutScreen.kt`.
 
 ## Run it
 
@@ -80,6 +236,17 @@ into `composeApp/build/screens/`):
 ./gradlew :composeApp:desktopTest
 ```
 
+## Tools and documents
+
+| What | Where | Make it again with |
+|---|---|---|
+| Printable workbook (40 pages) | `docs/AlifUp-Workbook.pdf` | `python3 tools/workbook/make_workbook.py` |
+| Teacher review sheet | `docs/teacher-review.pdf` | `python3 tools/review/make_review_sheet.py` then `node tools/review/to_pdf.js` |
+| Download page, privacy policy | `docs/index.html`, `docs/privacy.html` | (GitHub Pages: Settings → Pages → `main`, `/docs`) |
+| Store listing (F-Droid / IzzyOnDroid) | `fastlane/metadata/android/en-US/` | edit the text files |
+| Release steps, signing key | `docs/RELEASING.md` | |
+| CI: Android APK, tests, screenshots | `.github/workflows/build.yml` | runs on every push |
+
 ## Code map
 
 ```
@@ -88,11 +255,19 @@ composeApp/src/
     data/Letters.kt        28 letters, their shapes, sounds; vowel marks
     data/Quran.kt          loads the Tanzil XML; ayah/word lookup; EveryAyah URLs
     data/Course.kt         units, lessons, unlock rules, opening-letter ayat
+    data/Reading.kt        reading rules (sukūn, shadda, tanwīn, long vowels), practice syllables
+    data/Hifz.kt           the surahs of the memorisation track
+    data/Sound.kt          Sound (streamed ayah or bundled clip); which letter clips exist
     engine/Exercise.kt     exercise types (intro cards, multiple choice, match pairs)
     engine/LessonBuilder.kt  turns a lesson into a shuffled list of exercises
+    engine/HifzBuilder.kt  memorisation exercises (next ayah, next word, ordering)
     engine/LessonSession.kt  one lesson in progress: answers, hearts, re-asking mistakes
-    engine/Progress.kt     XP, streak, hearts, saving
-    ui/                    Home, Lesson, Result, About screens; theme
+    engine/Progress.kt     XP, streak, hearts, daily goal, review schedule, saving
+    engine/Skills.kt       names of what questions practise (letter:ba, rule:shadda …)
+    ui/                    Home, Lesson, Result, Settings, About, Reader screens; theme
+    engine/RepeatPlan.kt   what the reader plays next (repeat each ayah, loop a range)
+    engine/Tracing.kt      scores a traced letter
+    engine/Badges.kt       milestones, worked out from progress
     Platform.kt            expect: storage, audio, date, back button
   androidMain/             MediaPlayer audio, files dir storage, MainActivity
   desktopMain/             JLayer MP3 audio, %APPDATA% storage, window
@@ -103,16 +278,18 @@ composeApp/src/
 
 Roughly in order of value:
 
-1. **Letter sounds audio.** Only 14 letters can be heard (via the Quran's opening letters).
-   Record or license clean recordings of all 28 letters and the vowel syllables.
-2. **More reading units:** sukūn, shadda, tanwīn, long vowels (ا و ي), then reading whole
-   words and short ayat of Juz ʿAmma with word-by-word highlighting.
-3. **Hifz (memorisation) track** for Juz ʿAmma: ayah ordering, fill the missing word,
-   listen-and-continue, recite-along.
+1. **Syllable audio.** Letter names are recorded; ba/bi/bu syllables still need recording
+   (see *Letter sounds*).
+2. **More reading:** ~~sukūn, shadda, tanwīn, long vowels~~ (done); next: hamza forms, the
+   silent letters of the Uthmani script, reading short ayat with word-by-word highlighting.
+3. **Hifz (memorisation) track** — ~~ordering, next word, listen-and-continue~~ (done for 21
+   surahs); next: the rest of Juz ʿAmma (longer surahs split into parts), recite-along with
+   speech recognition, a revision schedule per memorised surah.
 4. **Tajweed basics** (qalqala, ghunna, madd) with colour-coded text — Tanzil offers tajweed data.
 5. **Meaning** — word-by-word meanings once a translation with clear terms is chosen.
-6. **Review system** — spaced repetition of weak letters, a "practice to earn hearts" mode,
-   daily goal setting, reminders.
-7. **Release prep** — app icon, signed release APK / Play Store listing, Windows installer
-   (`./gradlew packageMsi` needs WiX), audio permission from EveryAyah or another source,
-   offline audio caching.
+6. **Review system** — ~~spaced repetition, practice to earn hearts, daily goal~~ (done);
+   next: reminders (notifications).
+7. **Release prep** — ~~app icon, offline audio caching~~ (done: `tools/icon/make_icon.py`;
+   heard ayat are cached, up to ~300 MB); next: signed release APK / Play Store listing,
+   Windows installer (`./gradlew packageMsi` — icon and upgrade id are set), audio permission
+   from EveryAyah or another source.

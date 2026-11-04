@@ -3,10 +3,13 @@ package app.iqra
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
 import app.iqra.data.Course
 import app.iqra.data.QuranText
@@ -42,7 +45,7 @@ class ScreenshotTest {
     }
 
     private fun lessonShot(name: String, exercise: Exercise) = shot(name) {
-        LessonScreen("u1-learn", listOf(exercise), ProgressStore(), {}, {})
+        LessonScreen("u1-learn", "Meet the letters", listOf(exercise), ProgressStore(), {}, {})
     }
 
     @Test
@@ -65,6 +68,38 @@ class ScreenshotTest {
         val op = b.build(Course.lesson("u9-listen"))
         lessonShot("opening-listen", op.first { it is Exercise.Choice && it.autoPlay })
         lessonShot("opening-letters", op.first { it is Exercise.Choice && !it.autoPlay })
-        shot("result") { ResultScreen(LessonResult("u1-learn", true, 15, 92), 3) {} }
+        val sukun = b.build(Course.lesson("u10-learn"))
+        lessonShot("rule-intro", sukun.first())
+        lessonShot("rule-read", sukun.first { it is Exercise.Choice && it.prompt.startsWith("How") })
+        lessonShot("rule-which", sukun.first { it is Exercise.Choice && it.prompt.startsWith("Which one") })
+        lessonShot("rule-quran", b.build(Course.lesson("u11-quran")).first { it is Exercise.Choice && it.prompt.startsWith("Which word") })
+        val hifz = b.build(Course.lesson("h112-learn"))
+        lessonShot("hifz-ayah", hifz.first())
+        lessonShot("hifz-next-ayah", hifz.first { it is Exercise.Choice && it.prompt == "What comes next?" })
+        lessonShot("hifz-order", hifz.first { it is Exercise.Order })
+        lessonShot("hifz-next-word", b.build(Course.lesson("h1-recall")).first { it is Exercise.Choice && it.prompt == "Which word comes next?" })
+        shot("settings") { app.iqra.ui.SettingsScreen(ProgressStore()) {} }
+        lessonShot("trace", learn.first { it is Exercise.Trace })
+        val meta = app.iqra.data.QuranMeta.parse(File("src/commonMain/composeResources/files/quran_metadata.xml").readText())
+        val extras = app.iqra.ui.ReaderExtras(
+            app.iqra.data.TajweedMarks.parse(File("src/commonMain/composeResources/files/tajweed.txt").readText()),
+            app.iqra.data.Translation.parse("Saheeh International", File("src/commonMain/composeResources/files/translation_en_sahih.txt").readText()),
+        )
+        shot("reader") { app.iqra.ui.ReaderScreen(quran, meta.surah(112), {}, extras) }
+        shot("reader-fatiha") { app.iqra.ui.ReaderScreen(quran, meta.surah(1), {}, extras) }
+        shot("surah-list") {
+            androidx.compose.foundation.layout.Column(
+                Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 20.dp),
+            ) { app.iqra.ui.SurahList(meta) {} }
+        }
+        shot("result") { ResultScreen(LessonResult("Meet the letters", true, 15, 92), 3) {} }
+        shot("home-coins") { HomeScreen(progress.copy(coins = 3), {}, {}) }
+        shot("support") { app.iqra.ui.SupportScreen {} }
+        val exam = b.exam(app.iqra.data.Exams.READING)
+        shot("exam-voice") {
+            LessonScreen(app.iqra.data.Exams.READING, "Exam: reading", listOf(exam.first { it is Exercise.Voice }), ProgressStore(), {}, {})
+        }
+        shot("exam-passed") { ResultScreen(LessonResult("Exam: all 28 letters", true, 20, 90, exam = true, coinsEarned = 3), 3) {} }
+        shot("exam-failed") { ResultScreen(LessonResult("Exam: all 28 letters", false, 0, 60, exam = true), 3) {} }
     }
 }

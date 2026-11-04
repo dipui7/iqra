@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -47,22 +48,43 @@ compose.resources {
     publicResClass = false
 }
 
+// Release signing key, kept out of git: copy keystore.properties.example to keystore.properties
+// and fill it in (see docs/RELEASING.md). Without it, release builds are simply unsigned.
+val keystoreProperties = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->
+    Properties().apply { file.inputStream().use { load(it) } }
+}
+
 android {
     namespace = "app.iqra"
     compileSdk = 35
     defaultConfig {
-        applicationId = "app.iqra"
+        applicationId = "app.alifup"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 3
+        versionName = "1.0.0"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    val props = keystoreProperties
+    if (props != null) {
+        signingConfigs {
+            create("release") {
+                // A relative path is relative to the project folder; CI writes an absolute one.
+                storeFile = rootProject.file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
-        getByName("release") { isMinifyEnabled = false }
+        getByName("release") {
+            isMinifyEnabled = false
+            if (props != null) signingConfig = signingConfigs.getByName("release")
+        }
     }
 }
 
@@ -71,8 +93,18 @@ compose.desktop {
         mainClass = "app.iqra.MainKt"
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
-            packageName = "Iqra"
-            packageVersion = "0.1.0"
+            packageName = "AlifUp"
+            packageVersion = "1.0.0"
+            description = "Learn to read and memorise the Quran"
+            vendor = "AlifUp"
+            windows {
+                iconFile.set(project.file("icon.ico"))
+                menuGroup = "AlifUp"
+                shortcut = true
+                // Keeps upgrades installing over the previous version instead of side by side.
+                upgradeUuid = "042d94df-165c-4b60-8b29-7decafa8f176"
+            }
+            linux { iconFile.set(project.file("icon.png")) }
         }
     }
 }

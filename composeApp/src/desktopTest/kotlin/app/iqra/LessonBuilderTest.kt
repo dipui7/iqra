@@ -2,9 +2,13 @@ package app.iqra
 
 import app.iqra.data.Course
 import app.iqra.data.Letters
+import app.iqra.data.LetterAudio
 import app.iqra.data.QuranText
+import app.iqra.data.Rules
+import app.iqra.data.Harakat
 import app.iqra.engine.Exercise
 import app.iqra.engine.LessonBuilder
+import app.iqra.engine.Skills
 import java.io.File
 import kotlin.random.Random
 import kotlin.test.Test
@@ -46,8 +50,60 @@ class LessonBuilderTest {
     }
 
     @Test
+    fun lessonsWithAllLetterRecordingsAreValid() {
+        val audio = LetterAudio(LetterAudio.allPaths.toSet())
+        repeat(20) { seed ->
+            val builder = LessonBuilder(quran, Random(seed), audio)
+            for (lesson in Course.allLessons) for (e in builder.build(lesson)) if (e is Exercise.Choice) {
+                assertTrue(e.correct in e.options.indices)
+                assertEquals(e.options.size, e.options.map { it.label }.toSet().size, "${lesson.id}: duplicate options in $e")
+                if (e.autoPlay) assertTrue(e.audio != null)
+            }
+        }
+    }
+
+    @Test
+    fun practiceCoversEverySkill() {
+        val skills = Letters.all.map(Skills::letter) + Harakat.all.map(Skills::vowel) + Rules.all.map(Skills::rule)
+        repeat(20) { seed ->
+            for (skill in skills) {
+                val questions = LessonBuilder(quran, Random(seed)).practice(listOf(skill), questions = 4)
+                assertEquals(4, questions.size, skill)
+                for (q in questions) {
+                    q as Exercise.Choice
+                    assertEquals(skill, q.skill)
+                    assertEquals(q.options.size, q.options.map { it.label }.toSet().size, "duplicate options in $q")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun ruleQuestionsAboutQuranWordsAreRight() {
+        val words = Course.wordSurahs.flatMap { quran.words(it) }
+        for (rule in Rules.all) {
+            val with = words.count { rule.inWord(it.text) }
+            val without = words.count { rule.clearlyWithout(it.text) }
+            assertTrue(with > 20 && without > 20, "${rule.key}: $with with, $without without")
+            assertTrue(words.none { rule.inWord(it.text) && rule.clearlyWithout(it.text) }, rule.key)
+        }
+    }
+
+    @Test
     fun everyLetterCanBeFoundInJuzAmma() {
         val words = Course.wordSurahs.flatMap { quran.words(it) }
         for (letter in Letters.all) assertTrue(words.any { Letters.appearsIn(letter, it.text) }, "No word with ${letter.name}")
+    }
+
+    @Test
+    fun practiceWordsAreEasyToRead() {
+        repeat(50) { seed ->
+            val builder = LessonBuilder(quran, Random(seed))
+            for (lesson in Course.allLessons) for (e in builder.build(lesson)) {
+                if (e !is Exercise.Choice || e.prompt != "How is this read?") continue
+                // Words of two or more syllables never contain ʿAyn twice (e.g. "ʿaʿ").
+                for (o in e.options) assertTrue(o.label.count { it == 'ʿ' } <= 1, "${lesson.id}: hard to read \"${o.label}\"")
+            }
+        }
     }
 }

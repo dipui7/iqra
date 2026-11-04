@@ -1,0 +1,104 @@
+name: Build
+
+# Builds the Android app and runs the desktop tests (including the screenshot renderer and the
+# EveryAyah download check, which need a normal machine with internet). The APK, screenshots
+# and test reports are kept as downloadable artifacts (90 days by default).
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+  # Publishing a release on GitHub builds the signed APK and attaches it to the release.
+  release:
+    types: [published]
+
+permissions:
+  contents: write  # to attach the APK to a release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Repository secrets (Settings > Secrets and variables > Actions); see docs/RELEASING.md.
+      # Without them only the debug APK is built.
+      KEYSTORE_BASE64: ${{ secrets.ALIFUP_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Android APK
+        run: bash ./gradlew :composeApp:assembleDebug --stacktrace
+
+      # Release builds run extra Android checks a debug build skips; check them even without a key.
+      - name: Check the release build (unsigned, no key set up yet)
+        if: env.KEYSTORE_BASE64 == ''
+        run: bash ./gradlew :composeApp:assembleRelease --stacktrace
+
+      - name: Build signed release APK
+        if: env.KEYSTORE_BASE64 != ''
+        env:
+          STORE_PASSWORD: ${{ secrets.ALIFUP_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ALIFUP_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ALIFUP_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.jks"
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+          bash ./gradlew :composeApp:assembleRelease --stacktrace
+          version=$(grep -m1 'versionName = ' composeApp/build.gradle.kts | sed -E 's/.*"(.*)".*/\1/')
+          mkdir -p release
+          cp composeApp/build/outputs/apk/release/composeApp-release.apk "release/AlifUp-$version.apk"
+          rm -f keystore.properties "$RUNNER_TEMP/release.jks"
+          ls -l release
+
+      - name: Upload signed APK
+        if: env.KEYSTORE_BASE64 != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: alifup-signed-apk
+          path: release/*.apk
+
+      - name: Attach signed APK to the release
+        if: github.event_name == 'release' && env.KEYSTORE_BASE64 != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" release/*.apk --clobber
+
+      - name: Desktop tests and screenshots
+        if: always()
+        run: bash ./gradlew :composeApp:desktopTest --continue
+
+      - name: Upload APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alifup-debug-apk
+          path: composeApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: composeApp/build/screens/
+          if-no-files-found: warn
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: composeApp/build/reports/tests/
+          if-no-files-found: warn

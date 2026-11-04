@@ -68,8 +68,23 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    val props = keystoreProperties
+    if (props != null) {
+        signingConfigs {
+            create("release") {
+                // A relative path is relative to the project folder; CI writes an absolute one.
+                storeFile = rootProject.file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
-        getByName("release") { isMinifyEnabled = false }
+        getByName("release") {
+            isMinifyEnabled = false
+            if (props != null) signingConfig = signingConfigs.getByName("release")
+        }
     }
 }
 
@@ -81,10 +96,10 @@ compose.desktop {
             packageName = "AlifUp"
             packageVersion = "1.0.0"
             description = "Learn to read and memorise the Quran"
-            vendor = "Iqra"
+            vendor = "AlifUp"
             windows {
                 iconFile.set(project.file("icon.ico"))
-                menuGroup = "Iqra"
+                menuGroup = "AlifUp"
                 shortcut = true
                 // Keeps upgrades installing over the previous version instead of side by side.
                 upgradeUuid = "042d94df-165c-4b60-8b29-7decafa8f176"

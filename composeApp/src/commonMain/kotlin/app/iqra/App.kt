@@ -87,8 +87,13 @@ fun App() {
         // Find out once which letter recordings are bundled; lessons only ask about those.
         val letterAudio by produceState<LetterAudio?>(null) {
             value = withContext(Dispatchers.Default) {
-                // In parallel: on the web each check is a download, and most syllable clips don't exist yet.
-                coroutineScope {
+                // files/letters/index.txt lists the bundled clips, so one read replaces 109 lookups
+                // (on the web each lookup is a download, and most syllable clips don't exist yet).
+                val listed = runCatching { Res.readBytes("${LetterAudio.DIR}/index.txt").decodeToString() }.getOrNull()
+                    ?.lines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.map { "${LetterAudio.DIR}/$it" }?.toSet()
+                if (listed != null) {
+                    LetterAudio(LetterAudio.allPaths.filter { it in listed }.toSet())
+                } else coroutineScope {
                     val found = LetterAudio.allPaths.map { path -> async { path.takeIf { runCatching { Res.readBytes(it) }.isSuccess } } }
                     LetterAudio(found.awaitAll().filterNotNull().toSet())
                 }

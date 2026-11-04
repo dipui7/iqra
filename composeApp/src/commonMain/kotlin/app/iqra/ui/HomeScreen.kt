@@ -93,7 +93,11 @@ fun HomeScreen(
     ) {
         item { Header(progress, onAbout, onSettings, onSupport, onBadges) }
         item { CoinsCard(progress, today, onBuyUnlimited) }
-        nextExam(progress)?.let { (unit, exam) -> item { NextExamCard(unit, exam) { start(exam.id) } } }
+        // The next exam of the tab being shown (the Quran tab has none).
+        if (track != Track.Quran) Course.nextExam(track, progress.passedExams)?.let { (unit, exam) ->
+            val open = Course.isUnlocked(exam.id, progress.completed)
+            item { NextExamCard(unit, exam, open) { start(exam.id) } }
+        }
         if (progress.skills.isNotEmpty()) item { PracticeCard(progress.dueCount(today), progress.hearts < MAX_HEARTS, onPractice) }
         item { TrackSwitch(track, onTrackChange) }
         if (track == Track.Hifz) {
@@ -243,21 +247,16 @@ private fun earnsCoins(examId: String): String {
     return "earns $n ${if (n == 1) "coin" else "coins"}"
 }
 
-/** The first exam not passed yet, reading track first, with the unit it ends. */
-private fun nextExam(progress: Progress): Pair<CourseUnit, Lesson>? =
-    (Course.units + Course.hifzUnits).flatMap { u -> u.lessons.filter { Exams.isExam(it.id) }.map { u to it } }
-        .firstOrNull { (_, l) -> l.id !in progress.passedExams && Course.isUnlocked(l.id, progress.completed) }
-
 @Composable
-private fun NextExamCard(unit: CourseUnit, exam: Lesson, onStart: () -> Unit) {
+private fun NextExamCard(unit: CourseUnit, exam: Lesson, open: Boolean, onStart: () -> Unit) {
     val where = if (unit.track == Track.Reading) "Unit ${unit.id.drop(1)}" else unit.title
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card).clickable(onClick = onStart)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.card).clickable(enabled = open, onClick = onStart)
             .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(40.dp).clip(CircleShape).background(palette.streak), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.Stars, null, tint = palette.onAccent, modifier = Modifier.size(22.dp))
+        Box(Modifier.size(40.dp).clip(CircleShape).background(if (open) palette.streak else palette.separator), contentAlignment = Alignment.Center) {
+            Icon(if (open) Icons.Rounded.Stars else Icons.Rounded.Lock, null, tint = if (open) palette.onAccent else palette.secondary, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -266,11 +265,15 @@ private fun NextExamCard(unit: CourseUnit, exam: Lesson, onStart: () -> Unit) {
                 style = MaterialTheme.typography.titleMedium, color = palette.text,
             )
             Text(
-                (if (Exams.isUnitCheck(exam.id)) "Next · 5 questions · " else "Next exam · after $where · ") + earnsCoins(exam.id),
+                when {
+                    !open -> "Finish $where's lessons to unlock · " + earnsCoins(exam.id)
+                    Exams.isUnitCheck(exam.id) -> "Next · 5 questions · " + earnsCoins(exam.id)
+                    else -> "Next exam · after $where · " + earnsCoins(exam.id)
+                },
                 style = MaterialTheme.typography.bodyMedium, color = palette.secondary,
             )
         }
-        Icon(Icons.Rounded.PlayArrow, "Start exam", tint = palette.streak)
+        if (open) Icon(Icons.Rounded.PlayArrow, "Start exam", tint = palette.streak)
     }
 }
 

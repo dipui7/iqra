@@ -227,6 +227,15 @@ object Course {
         return units.flatMap { it.lessons }.takeWhile { it.id != lessonId }.all { it.id in completed }
     }
 
+    /**
+     * The first exam of [track] not passed yet, with the unit it ends. It may still be locked;
+     * the home screen then says what unlocks it rather than suggesting an exam from another track.
+     */
+    fun nextExam(track: Track, passed: Set<String>): Pair<CourseUnit, Lesson>? =
+        (if (track == Track.Hifz) hifzUnits else units)
+            .flatMap { u -> u.lessons.filter { it.kind == LessonKind.Exam }.map { u to it } }
+            .firstOrNull { (_, lesson) -> lesson.id !in passed }
+
     val openings: List<Opening> = with(Letters) {
         listOf(
             Opening(AyahRef(2, 1), listOf(alif, lam, mim)),

@@ -236,6 +236,21 @@ into `composeApp/build/screens/`):
 ./gradlew :composeApp:desktopTest
 ```
 
+## Web version
+
+The same app runs in the browser (Kotlin/Wasm), for iPhone, iPad, Mac and anyone who'd rather not
+install anything. GitHub Actions builds it and publishes the website from `main`: the pages in
+`docs/` at the root and the app at `/app/` — https://dipui7.github.io/iqra/app/ once Pages is on
+(Settings → Pages → Source: **GitHub Actions**, once).
+
+On the web, progress is kept in the browser (Settings → Backup moves it), recitation streams from
+EveryAyah, and there is no daily reminder. Voice questions need EveryAyah to allow browsers to
+read its files; if it doesn't, they say the recording couldn't be loaded.
+
+Build it locally: `./gradlew :composeApp:wasmJsBrowserDistribution`
+(output in `composeApp/build/dist/wasmJs/productionExecutable/`), or run it with
+`./gradlew :composeApp:wasmJsBrowserDevelopmentRun`.
+
 ## Tools and documents
 
 | What | Where | Make it again with |
@@ -245,7 +260,7 @@ into `composeApp/build/screens/`):
 | Download page, privacy policy | `docs/index.html`, `docs/privacy.html` | (GitHub Pages: Settings → Pages → `main`, `/docs`) |
 | Store listing (F-Droid / IzzyOnDroid) | `fastlane/metadata/android/en-US/` | edit the text files |
 | Release steps, signing key | `docs/RELEASING.md` | |
-| CI: Android APK, tests, screenshots | `.github/workflows/build.yml` | runs on every push |
+| CI: Android APK, Windows installer, web app, website | `.github/workflows/build.yml` | runs on every push |
 
 ## Code map
 

@@ -14,7 +14,7 @@ import javax.sound.sampled.TargetDataLine
 import javax.swing.SwingUtilities
 import kotlin.concurrent.thread
 
-actual fun decodeMp3(bytes: ByteArray): Pcm? = runCatching {
+actual suspend fun decodeMp3(bytes: ByteArray): Pcm? = runCatching {
     val bitstream = Bitstream(ByteArrayInputStream(bytes))
     val decoder = Decoder()
     val out = ArrayList<Float>(bytes.size * 4)
@@ -38,7 +38,7 @@ actual fun decodeMp3(bytes: ByteArray): Pcm? = runCatching {
     if (rate == 0 || out.isEmpty()) null else Pcm(out.toFloatArray(), rate)
 }.getOrNull()
 
-actual fun fetchAudioBytes(url: String): ByteArray? = runCatching {
+actual suspend fun fetchAudioBytes(url: String): ByteArray? = runCatching {
     cachedAudio(url)?.readBytes() ?: URI(url).toURL().openConnection().apply {
         setRequestProperty("User-Agent", "AlifUp/0.2")
         connectTimeout = 10_000

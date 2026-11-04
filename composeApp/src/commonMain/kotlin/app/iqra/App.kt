@@ -45,6 +45,9 @@ import app.iqra.ui.SupportScreen
 import app.iqra.ui.palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
 private sealed interface Screen {
@@ -84,7 +87,11 @@ fun App() {
         // Find out once which letter recordings are bundled; lessons only ask about those.
         val letterAudio by produceState<LetterAudio?>(null) {
             value = withContext(Dispatchers.Default) {
-                LetterAudio(LetterAudio.allPaths.filter { runCatching { Res.readBytes(it) }.isSuccess }.toSet())
+                // In parallel: on the web each check is a download, and most syllable clips don't exist yet.
+                coroutineScope {
+                    val found = LetterAudio.allPaths.map { path -> async { path.takeIf { runCatching { Res.readBytes(it) }.isSuccess } } }
+                    LetterAudio(found.awaitAll().filterNotNull().toSet())
+                }
             }
         }
         val store = remember { ProgressStore() }

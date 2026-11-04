@@ -1,0 +1,9 @@
+{
+  "name": "AlifUp — learn to read the Quran",
+  "short_name": "AlifUp",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F7F5EE",
+  "theme_color": "#2E8B62",
+  "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}

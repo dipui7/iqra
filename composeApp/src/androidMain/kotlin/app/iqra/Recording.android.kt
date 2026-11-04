@@ -24,7 +24,7 @@ var requestMicPermission: ((onResult: (Boolean) -> Unit) -> Unit)? = null
 
 private val handler by lazy { Handler(Looper.getMainLooper()) }
 
-actual fun decodeMp3(bytes: ByteArray): Pcm? = runCatching {
+actual suspend fun decodeMp3(bytes: ByteArray): Pcm? = runCatching {
     // MediaExtractor reads from a file, so the clip goes to a temporary one first.
     val tmp = File.createTempFile("clip", ".mp3", appContext.cacheDir)
     try {
@@ -85,7 +85,7 @@ private fun decodeFile(file: File): Pcm? {
     return if (out.isEmpty()) null else Pcm(out.toFloatArray(), rate)
 }
 
-actual fun fetchAudioBytes(url: String): ByteArray? = runCatching {
+actual suspend fun fetchAudioBytes(url: String): ByteArray? = runCatching {
     val dir = File(appContext.cacheDir, "audio").apply { mkdirs() }
     val cached = File(dir, url.substringAfter("://").replace(Regex("[^A-Za-z0-9.]"), "_"))
     if (cached.exists()) return@runCatching cached.readBytes()

@@ -130,6 +130,14 @@ def write_clip(src, start, end, key):
     return dest
 
 
+def write_index():
+    """files/letters/index.txt: the clips that exist, which the app reads instead of probing for each."""
+    names = sorted(f for f in os.listdir(OUT) if f.endswith(".mp3")) if os.path.isdir(OUT) else []
+    with open(os.path.join(OUT, "index.txt"), "w") as f:
+        f.write("".join(n + "\n" for n in names))
+    print(f"Listed {len(names)} clips in index.txt")
+
+
 def cmd_script(_):
     for take, title in (("names", "Take 1 - letter names"), ("a", "Take 2 - with fatha"),
                         ("i", "Take 3 - with kasra"), ("u", "Take 4 - with damma")):
@@ -151,6 +159,7 @@ def cmd_split(a):
         write_clip(a.file, s, e, key)
         print(f"  {key:10} {say:8} {s:7.2f}s - {e:7.2f}s")
     print(f"Wrote {len(expected)} clips to {os.path.relpath(OUT, ROOT)}")
+    write_index()
 
 
 def cmd_one(a):
@@ -160,12 +169,14 @@ def cmd_one(a):
     if not segs:
         sys.exit("No sound found in the file.")
     print("Wrote", os.path.relpath(write_clip(a.file, segs[0][0], segs[-1][1], a.key), ROOT))
+    write_index()
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("script", help="print the lists to read")
+    sub.add_parser("index", help="rewrite files/letters/index.txt from the clips present")
     for name, fn in (("split", cmd_split), ("one", cmd_one)):
         s = sub.add_parser(name)
         if name == "split":
@@ -179,6 +190,8 @@ def main():
     a = p.parse_args()
     if a.cmd == "script":
         cmd_script(a)
+    elif a.cmd == "index":
+        write_index()
     else:
         a.fn(a)
 

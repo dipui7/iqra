@@ -16,6 +16,15 @@ kotlin {
     }
     jvm("desktop")
 
+    // The web version (Kotlin/Wasm), published on GitHub Pages; see .github/workflows/build.yml.
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser {
+            commonWebpackConfig { outputFileName = "composeApp.js" }
+        }
+        binaries.executable()
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -25,6 +34,9 @@ kotlin {
             implementation(compose.components.resources)
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+        }
+        wasmJsMain.dependencies {
+            implementation("org.jetbrains.kotlinx:kotlinx-browser:0.3")
         }
         androidMain.dependencies {
             implementation("androidx.activity:activity-compose:1.10.1")

@@ -26,7 +26,7 @@ class ExamTest {
     private val day = 20_000L
 
     private fun clip(letterKey: String): Pcm =
-        decodeMp3(File(resources, "${LetterAudio.DIR}/$letterKey.mp3").readBytes())!!
+        kotlinx.coroutines.runBlocking { decodeMp3(File(resources, "${LetterAudio.DIR}/$letterKey.mp3").readBytes())!! }
 
     @Test
     fun everyStageEndsWithAnExam() {

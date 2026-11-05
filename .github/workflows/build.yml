@@ -1,8 +1,13 @@
 name: Build
 
-# Builds the Android app and runs the desktop tests (including the screenshot renderer and the
-# EveryAyah download check, which need a normal machine with internet). The APK, screenshots
-# and test reports are kept as downloadable artifacts (90 days by default).
+# Builds every version of AlifUp:
+# - build:   the Android APK (signed if the key is in repository secrets) and the desktop tests,
+#            including the screenshot renderer and the EveryAyah download check;
+# - windows: the Windows installer (.msi);
+# - web:     the browser version, with screenshots from a real headless browser;
+# - pages:   on main, publishes the website (docs/ at the root, the web app at /app/) to GitHub Pages.
+# Files are kept as downloadable artifacts (90 days by default); publishing a release also
+# attaches the signed APK and the installer to it.
 on:
   push:
     branches: [main, "claude/**"]
@@ -102,3 +107,99 @@ jobs:
           name: test-reports
           path: composeApp/build/reports/tests/
           if-no-files-found: warn
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the Windows installer
+        shell: pwsh
+        run: |
+          ./gradlew.bat :composeApp:packageMsi --stacktrace
+          $version = (Select-String -Path composeApp/build.gradle.kts -Pattern 'packageVersion = "(.*)"').Matches[0].Groups[1].Value
+          New-Item -ItemType Directory -Force installer | Out-Null
+          Copy-Item (Get-ChildItem composeApp/build/compose/binaries/main/msi/*.msi | Select-Object -First 1).FullName "installer/AlifUp-$version.msi"
+          Get-ChildItem installer
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: alifup-windows-installer
+          path: installer/*.msi
+
+      - name: Attach installer to the release
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" (Get-ChildItem installer/*.msi).FullName --clobber
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the web app
+        run: bash ./gradlew :composeApp:wasmJsBrowserDistribution --stacktrace
+
+      - name: Put the website together
+        run: |
+          mkdir -p site/app
+          cp -r docs/. site/
+          cp -r composeApp/build/dist/wasmJs/productionExecutable/. site/app/
+          touch site/.nojekyll
+          du -sh site site/app
+
+      - name: Open the web app in a browser and take screenshots
+        continue-on-error: true
+        run: |
+          npm install --no-save playwright@1.48.2
+          npx playwright install --with-deps chromium
+          (cd site && python3 -m http.server 8080 >/dev/null 2>&1 &)
+          sleep 2
+          node tools/web/screenshot.mjs http://localhost:8080/app/ web-screens
+
+      - name: Upload web screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-screenshots
+          path: web-screens/
+          if-no-files-found: warn
+
+      - name: Prepare the website for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  pages:
+    # Publishing needs Settings > Pages > Source: "GitHub Actions" (once).
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: web
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

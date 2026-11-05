@@ -25,10 +25,10 @@ expect fun stopAudio()
 expect fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit)
 
 /** Decode an MP3 to mono samples, or null if it can't be decoded. */
-expect fun decodeMp3(bytes: ByteArray): app.iqra.engine.Pcm?
+expect suspend fun decodeMp3(bytes: ByteArray): app.iqra.engine.Pcm?
 
 /** Download a recitation (or read it from the offline cache). Blocking: call off the UI thread. */
-expect fun fetchAudioBytes(url: String): ByteArray?
+expect suspend fun fetchAudioBytes(url: String): ByteArray?
 
 /**
  * Start recording from the microphone (asking for permission first where needed).

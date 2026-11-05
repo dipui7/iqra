@@ -67,7 +67,7 @@ private suspend fun loadPcm(sound: Sound): Pcm? = withContext(Dispatchers.Defaul
         is Sound.Clip -> runCatching { Res.readBytes(sound.path) }.getOrNull()
         is Sound.Ayah -> fetchAudioBytes(sound.ref.audioUrl)
     }
-    bytes?.let(::decodeMp3)
+    bytes?.let { decodeMp3(it) }
 }
 
 @Composable

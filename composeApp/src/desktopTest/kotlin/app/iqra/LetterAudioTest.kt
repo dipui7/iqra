@@ -16,7 +16,10 @@ class LetterAudioTest {
     @Test
     fun bundledClipsAreKnownAndDecode() {
         val dir = File(resources, LetterAudio.DIR)
-        val files = dir.listFiles().orEmpty().filter { it.isFile && !it.name.startsWith(".") && it.name != "CREDITS.md" }
+        val files = dir.listFiles().orEmpty().filter { it.isFile && it.name.endsWith(".mp3") }
+        // The app finds its clips through index.txt, so it must list exactly the bundled ones.
+        val index = File(dir, "index.txt").readLines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        kotlin.test.assertEquals(files.map { it.name }.toSet(), index, "files/letters/index.txt is out of date: run tools/letter-audio/make_clips.py index")
         for (file in files) {
             val path = "${LetterAudio.DIR}/${file.name}"
             assertTrue(path in LetterAudio.allPaths, "$path is not a recording the app uses (typo in the name?)")
